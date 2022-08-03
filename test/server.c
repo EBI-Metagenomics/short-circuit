@@ -37,6 +37,9 @@ struct server
     enum terminate terminate;
 };
 
+static char const *sock_path = 0;
+static FILE *output = 0;
+
 static void fatal(char const *msg)
 {
     fputs(msg, stderr);
@@ -44,21 +47,35 @@ static void fatal(char const *msg)
     exit(1);
 }
 
+static void out(char const *msg)
+{
+    fputs(msg, output);
+    fputc('\n', output);
+}
+
+static void outf(char const *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(output, fmt, args);
+    va_end(args);
+}
+
 static void close_socket(struct sc_socket *socket)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     if (sc_socket_close(socket)) fatal("sc_socket_close error");
 }
 
 static void print_record(struct sc_record const *record)
 {
     char const *msg = (char const *)record->data;
-    printf("[%u](%.*s)\n", record->size, record->size, msg);
+    outf("[%u](%.*s)\n", record->size, record->size, msg);
 }
 
 static void server_on_connection_success(struct sc_watcher *w)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     struct server *server = w->data;
     if (server->terminate) return;
 
@@ -69,14 +86,14 @@ static void server_on_connection_success(struct sc_watcher *w)
 static void server_on_recv_success(struct sc_watcher *w,
                                    struct sc_record *record)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     (void)w;
     print_record(record);
 }
 
 static void server_on_close(struct sc_watcher *w)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     struct server *server = w->data;
     uv_close((struct uv_handle_s *)&server->sigterm, 0);
     uv_close((struct uv_handle_s *)&server->sigint, 0);
@@ -85,7 +102,7 @@ static void server_on_close(struct sc_watcher *w)
 
 static void client_on_accept_success(struct sc_watcher *w)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     struct client *client = w->data;
     struct server *server = client->server;
     client->active = true;
@@ -95,7 +112,7 @@ static void client_on_accept_success(struct sc_watcher *w)
 static void client_on_recv_success(struct sc_watcher *w,
                                    struct sc_record *record)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     print_record(record);
     struct client *client = w->data;
     struct server *server = client->server;
@@ -104,40 +121,41 @@ static void client_on_recv_success(struct sc_watcher *w,
 
 static void client_on_recv_eof(struct sc_watcher *w)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     struct client *client = w->data;
     close_socket(client->socket);
 }
 
 static void client_on_close(struct sc_watcher *w)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     struct client *client = w->data;
     client->active = false;
 }
 
 static struct sc_record *alloc_record(uint32_t size)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     return malloc(sizeof(struct sc_record) + size);
 }
 
 static void free_record(struct sc_record *record)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     free(record);
 }
 
-static char const *fetch_sock_path(int argc, char **argv)
+static void parse_args(int argc, char **argv)
 {
-    puts(__FUNCTION__);
-    if (argc != 2) fatal("wrong number of arguments");
-    return argv[1];
+    if (argc != 3) fatal("wrong number of arguments");
+    sock_path = argv[1];
+    if (!(output = fopen(argv[2], "w"))) fatal("failed to create output");
+    out(__FUNCTION__);
 }
 
 static void async_cb(struct uv_async_s *handle)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     struct server *server = handle->data;
     server->terminate = CLIENT;
     uv_close((struct uv_handle_s *)&server->async, 0);
@@ -145,7 +163,7 @@ static void async_cb(struct uv_async_s *handle)
 
 static void signal_cb(struct uv_signal_s *handle, int signum)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     (void)signum;
     assert(signum == SIGTERM || signum == SIGINT);
     struct server *server = handle->data;
@@ -165,7 +183,7 @@ static void idle_cb(struct uv_idle_s *handle)
 
 static void async_init(struct server *server)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     if (uv_async_init(server->uv.loop, &server->async, async_cb))
         fatal("uv_async_init error");
 
@@ -175,7 +193,7 @@ static void async_init(struct server *server)
 static void signal_init(struct server *server, struct uv_signal_s *signal,
                         uv_signal_cb signal_cb, int signum)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     if (uv_signal_init(server->uv.loop, signal)) fatal("uv_signal_init error");
 
     if (uv_signal_start(signal, signal_cb, signum))
@@ -186,7 +204,7 @@ static void signal_init(struct server *server, struct uv_signal_s *signal,
 
 static void idle_init(struct server *server)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     if (uv_idle_init(server->uv.loop, &server->idle))
         fatal("uv_idle_init error");
 
@@ -197,13 +215,13 @@ static void idle_init(struct server *server)
 
 static void server_uv_init(struct server *server, struct uv_loop_s *loop)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     server->uv.loop = loop;
 }
 
 static void server_init(struct server *server)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     async_init(server);
     signal_init(server, &server->sigterm, signal_cb, SIGTERM);
     signal_init(server, &server->sigint, signal_cb, SIGINT);
@@ -223,7 +241,7 @@ static void server_init(struct server *server)
 
 void client_init(struct client *client, struct server *server)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     client->server = server;
     sc_watcher_init(&client->watcher);
     client->watcher.data = client;
@@ -240,7 +258,7 @@ void client_init(struct client *client, struct server *server)
 
 static struct server *server_new(void)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     struct server *server = malloc(sizeof(*server));
     if (!server) fatal("not enough memory");
     return server;
@@ -248,13 +266,13 @@ static struct server *server_new(void)
 
 static void server_del(struct server *server)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     free(server);
 }
 
 void server_bind_and_listen(struct server *server, char const *sock_path)
 {
-    puts(__FUNCTION__);
+    out(__FUNCTION__);
     if (sc_socket_bind(server->socket, sock_path))
         fatal("sc_socket_bind error");
 
@@ -263,9 +281,8 @@ void server_bind_and_listen(struct server *server, char const *sock_path)
 
 int main(int argc, char **argv)
 {
-    puts("begin -->");
+    parse_args(argc, argv);
 
-    char const *sock_path = fetch_sock_path(argc, argv);
     unlink(sock_path);
 
     struct server *server = server_new();
@@ -283,6 +300,7 @@ int main(int argc, char **argv)
 
     server_del(server);
     unlink(sock_path);
+    fclose(output);
 
-    return puts("<-- end"), 0;
+    return 0;
 }
