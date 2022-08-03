@@ -194,7 +194,6 @@ EOM
 sleep 0.5
 terminate_process $SERVER_PID
 wait_socket_disappear "$SOCKET_FILE"
-diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/actual.txt
-
 cat "$RUNTIME_DIR"/desired.txt 
 cat "$RUNTIME_DIR"/actual.txt
+diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/actual.txt
