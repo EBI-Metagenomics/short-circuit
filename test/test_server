@@ -33,9 +33,9 @@ function runtime_dir {
     fi
     echo >&2 "Ponto 6"
 
-    dir=$(mktemp -d --suffix=sc 2>/dev/null) || fatal "Failed to create runtime dir."
-    dir=$(mktemp -d -t sc 2>/dev/null) || fatal "Failed to create runtime dir."
-    echo -n "$dir"
+    dir=$(mktemp -d --suffix=sc 2>/dev/null) && echo -n "$dir" && return
+    dir=$(mktemp -d -t sc 2>/dev/null) && echo -n "$dir" && return
+    fatal "Failed to create runtime dir."
 }
 
 SERVER_BIN=$SCRIPT_DIR/server
