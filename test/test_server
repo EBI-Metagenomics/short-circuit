@@ -33,7 +33,8 @@ function runtime_dir {
     fi
     echo >&2 "Ponto 6"
 
-    dir=$(mktemp -d -t sc) || fatal "Failed to create runtime dir."
+    dir=$(mktemp -d --suffix=sc 2>/dev/null) || fatal "Failed to create runtime dir."
+    dir=$(mktemp -d -t sc 2>/dev/null) || fatal "Failed to create runtime dir."
     echo -n "$dir"
 }
 
