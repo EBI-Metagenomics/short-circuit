@@ -1,0 +1,20 @@
+starting
+server_on_connection_success
+client_on_accept_success
+alloc_record
+client_on_recv_success
+[12](Danilo Horta)
+free_record
+alloc_record
+client_on_recv_eof
+free_record
+client_on_close
+server_on_connection_success
+client_on_accept_success
+alloc_record
+client_on_recv_success
+[4](stop)
+free_record
+client_on_close
+server_on_close
+finishing

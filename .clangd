@@ -1,0 +1,4 @@
+Diagnostics:
+  ClangTidy:
+    Add: modernize*,llvm*,readability*
+    Remove: bugprone-sizeof-expression
