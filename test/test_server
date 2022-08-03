@@ -191,9 +191,11 @@ server_del
 <-- end
 EOM
 
-sleep 0.5
+sleep 1.5
 terminate_process $SERVER_PID
+sleep 1.5
 wait_socket_disappear "$SOCKET_FILE"
+ls -lah "$RUNTIME_DIR"
 cat "$RUNTIME_DIR"/desired.txt 
 cat "$RUNTIME_DIR"/actual.txt
 diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/actual.txt
