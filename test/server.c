@@ -146,6 +146,7 @@ static void async_cb(struct uv_async_s *handle)
 static void signal_cb(struct uv_signal_s *handle, int signum)
 {
     puts(__FUNCTION__);
+    (void)signum;
     assert(signum == SIGTERM || signum == SIGINT);
     struct server *server = handle->data;
     if (server->terminate) return;
