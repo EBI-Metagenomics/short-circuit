@@ -42,7 +42,7 @@ DESIRED_FILE=$RUNTIME_DIR/desired.txt
 stdbuf -i0 -o0 -e0 "$SERVER_BIN" "$SOCKET_FILE" >"$ACTUAL_FILE" &
 SERVER_PID=$!
 
-function stall { sleep 0.05; }
+function stall { sleep 0.1; }
 
 function wait_socket_exist {
     socket=$1
