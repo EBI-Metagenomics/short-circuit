@@ -39,7 +39,7 @@ SOCKET_FILE=$RUNTIME_DIR/server.sock
 ACTUAL_FILE=$RUNTIME_DIR/actual.txt
 DESIRED_FILE=$RUNTIME_DIR/desired.txt
 
-"$SERVER_BIN" "$SOCKET_FILE" >"$ACTUAL_FILE" &
+stdbuf -i0 -o0 -e0 "$SERVER_BIN" "$SOCKET_FILE" >"$ACTUAL_FILE" &
 SERVER_PID=$!
 
 function stall { sleep 0.05; }

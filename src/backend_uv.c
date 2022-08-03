@@ -55,8 +55,8 @@ static void buv_init(void *socket, struct sc_watcher *watcher)
     struct socket_uv *uv = socket;
     uv->watcher = watcher;
 
-    ((struct uv_handle_s *)(&uv->stream))->data = uv;
-    ((struct uv_stream_s *)(&uv->stream))->data = uv;
+    ((struct uv_handle_s *)(&uv->stream.pipe))->data = uv;
+    ((struct uv_stream_s *)(&uv->stream.pipe))->data = uv;
 
     uv->write_request.data = uv;
     uv->write_buffer = uv_buf_init(0, 0);
