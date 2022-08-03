@@ -10,22 +10,28 @@ function fatal {
 function runtime_dir {
     local dir=""
     if test -d /run; then
+        echo >&2 "Ponto 1"
         dir=/run
     elif test -d /var/run; then
+        echo >&2 "Ponto 2"
         dir=/var/run
     fi
 
     if ! test -z "$dir"; then
+        echo >&2 "Ponto 3"
         dir=$dir/sc
         if test -d $dir; then
+            echo >&2 "Ponto 4"
             echo -n "$dir"
             return
         fi
         if mkdir $dir 2>/dev/null; then
+            echo >&2 "Ponto 5"
             echo -n "$dir"
             return
         fi
     fi
+    echo >&2 "Ponto 6"
 
     dir=$(mktemp -d -t sc) || fatal "Failed to create runtime dir."
     echo -n "$dir"
