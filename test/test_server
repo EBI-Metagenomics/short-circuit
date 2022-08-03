@@ -2,21 +2,41 @@
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
-SERVER_BIN=$SCRIPT_DIR/server
-GENRECORD_BIN=$SCRIPT_DIR/generate_record
-RUNTIME_DIR=$SCRIPT_DIR/run
-SOCKET_FILE=$RUNTIME_DIR/server.sock
-ACTUAL_FILE=$RUNTIME_DIR/actual.txt
-DESIRED_FILE=$RUNTIME_DIR/desired.txt
-
 function fatal {
     echo >&2 "$1"
     exit 1
 }
 
-if ! test -d "$RUNTIME_DIR"; then
-    fatal "Run-time dir $RUNTIME_DIR not found."
-fi
+function runtime_dir {
+    local dir=""
+    if test -d /run; then
+        dir=/run
+    elif test -d /var/run; then
+        dir=/var/run
+    fi
+
+    if ! test -z "$dir"; then
+        dir=$dir/sc
+        if test -d $dir; then
+            echo -n "$dir"
+            return
+        fi
+        if mkdir $dir 2>/dev/null; then
+            echo -n "$dir"
+            return
+        fi
+    fi
+
+    dir=$(mktemp -d -t sc) || fatal "Failed to create runtime dir."
+    echo -n "$dir"
+}
+
+SERVER_BIN=$SCRIPT_DIR/server
+GENRECORD_BIN=$SCRIPT_DIR/generate_record
+RUNTIME_DIR=$(runtime_dir)
+SOCKET_FILE=$RUNTIME_DIR/server.sock
+ACTUAL_FILE=$RUNTIME_DIR/actual.txt
+DESIRED_FILE=$RUNTIME_DIR/desired.txt
 
 echo "$SERVER_BIN" "$SOCKET_FILE"
 "$SERVER_BIN" "$SOCKET_FILE" >"$ACTUAL_FILE" &
@@ -79,18 +99,24 @@ function on_exit {
 }
 trap on_exit EXIT
 
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    NC_ARGS=(-q 0 -U)
+else
+    NC_ARGS=(-U)
+fi
+
 (
     cd "$ASSETS_DIR" >/dev/null || exit 1
 
-    $GENRECORD_BIN print-both 0 | nc -U "$SOCKET_FILE"
-    $GENRECORD_BIN print-both 3 | nc -U "$SOCKET_FILE"
-    $GENRECORD_BIN print-both 22 | nc -U "$SOCKET_FILE"
+    $GENRECORD_BIN print-both 0 | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
+    $GENRECORD_BIN print-both 3 | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
+    $GENRECORD_BIN print-both 22 | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
 
     {
         $GENRECORD_BIN print-both 0
         $GENRECORD_BIN print-both 3
         $GENRECORD_BIN print-both 22
-    } | nc -U "$SOCKET_FILE"
+    } | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
 )
 
 cat >"$DESIRED_FILE" <<-EOM
