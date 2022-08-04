@@ -36,10 +36,11 @@ SERVER_BIN=$SCRIPT_DIR/server
 GENRECORD_BIN=$SCRIPT_DIR/generate_record
 RUNTIME_DIR=$(runtime_dir)
 SOCKET_FILE=$RUNTIME_DIR/server.sock
+PIPE_URI=sc+pipe://$SOCKET_FILE
 ACTUAL_FILE=$RUNTIME_DIR/actual.txt
 DESIRED_FILE=$RUNTIME_DIR/desired.txt
 
-"$SERVER_BIN" "$SOCKET_FILE" "$ACTUAL_FILE" &
+"$SERVER_BIN" "$PIPE_URI" "$ACTUAL_FILE" &
 SERVER_PID=$!
 
 function stall { sleep 0.05; }
