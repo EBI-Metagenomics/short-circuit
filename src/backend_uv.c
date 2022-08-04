@@ -195,10 +195,24 @@ static int buv_accept(void *server, void *client)
     struct socket_uv *srv = server;
     struct socket_uv *clt = client;
 
-    int r = uv_tcp_init(buv_data->loop, &clt->stream.tcp);
+    int r = 0;
+    if (srv->proto == PROTO_PIPE)
+    {
+        if ((r = uv_pipe_init(buv_data->loop, &clt->stream.pipe, 0)))
+            buv_error("pipe init error", r);
+    }
+    else if (srv->proto == PROTO_TCP)
+    {
+        if ((r = uv_tcp_init(buv_data->loop, &clt->stream.tcp)))
+            buv_error("tcp init error", r);
+    }
+    else
+        assert(false);
+
+    clt->proto = srv->proto;
+
     if (r)
     {
-        buv_error("tcp init error", r);
         (*clt->watcher->on_accept_failure)(clt->watcher);
         return r;
     }
@@ -225,10 +239,8 @@ static int buv_accept(void *server, void *client)
     return r;
 }
 
-static int bind_pipe(void *server, char const *filepath)
+static int bind_pipe(struct socket_uv *srv, char const *filepath)
 {
-    struct socket_uv *srv = server;
-
     int r = uv_pipe_init(buv_data->loop, &srv->stream.pipe, 0);
     if (r)
     {
@@ -243,10 +255,8 @@ static int bind_pipe(void *server, char const *filepath)
     return r;
 }
 
-static int bind_tcp(void *server, char const *ip4, unsigned port)
+static int bind_tcp(struct socket_uv *srv, char const *ip4, unsigned port)
 {
-    struct socket_uv *srv = server;
-
     int r = uv_tcp_init(buv_data->loop, &srv->stream.tcp);
     if (r)
     {
@@ -271,11 +281,14 @@ static int bind_tcp(void *server, char const *ip4, unsigned port)
 
 static int buv_bind(void *server, struct uri const *uri)
 {
-    enum proto proto = uri_scheme_protocol(uri);
-    if (proto == PROTO_PIPE) return bind_pipe(server, uri_pipe_filepath(uri));
-    if (proto == PROTO_TCP)
-        return bind_tcp(server, uri_tcp_ip4(uri), uri_tcp_port(uri));
-    return 1;
+    struct socket_uv *srv = server;
+    srv->proto = uri_scheme_protocol(uri);
+
+    if (srv->proto == PROTO_PIPE) return bind_pipe(srv, uri_pipe_filepath(uri));
+    if (srv->proto == PROTO_TCP)
+        return bind_tcp(srv, uri_tcp_ip4(uri), uri_tcp_port(uri));
+
+    assert(false);
 }
 
 static void on_connection_wrap(struct uv_stream_s *stream, int status)
