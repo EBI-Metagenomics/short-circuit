@@ -189,9 +189,8 @@ server_on_close
 server_del
 EOM
 
-sleep 1
+sleep 0.01
 terminate_process $SERVER_PID
-sleep 1
 wait_socket_disappear "$SOCKET_FILE"
 
 cat "$RUNTIME_DIR"/desired.txt

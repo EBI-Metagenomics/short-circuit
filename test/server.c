@@ -38,7 +38,7 @@ struct server
     enum terminate terminate;
 };
 
-static char const *sock_path = 0;
+static char const *uri = 0;
 static FILE *output = 0;
 
 static void fatal(char const *msg)
@@ -149,7 +149,7 @@ static void free_record(struct sc_record *record)
 static void parse_args(int argc, char **argv)
 {
     if (argc != 3) fatal("wrong number of arguments");
-    sock_path = argv[1];
+    uri = argv[1];
     if (!(output = fopen(argv[2], "w"))) fatal("failed to create output");
     out(__FUNCTION__);
 }
@@ -271,11 +271,10 @@ static void server_del(struct server *server)
     free(server);
 }
 
-void server_bind_and_listen(struct server *server, char const *sock_path)
+void server_bind_and_listen(struct server *server, char const *uri)
 {
     out(__FUNCTION__);
-    if (sc_socket_bind(server->socket, sock_path))
-        fatal("sc_socket_bind error");
+    if (sc_socket_bind(server->socket, uri)) fatal("sc_socket_bind error");
 
     if (sc_socket_listen(server->socket, 4)) fatal("sc_socket_listen error");
 }
@@ -283,8 +282,6 @@ void server_bind_and_listen(struct server *server, char const *sock_path)
 int main(int argc, char **argv)
 {
     parse_args(argc, argv);
-
-    unlink(sock_path);
 
     struct server *server = server_new();
     server_uv_init(server, uv_default_loop());
@@ -294,13 +291,12 @@ int main(int argc, char **argv)
     server_init(server);
     client_init(&server->client, server);
 
-    server_bind_and_listen(server, sock_path);
+    server_bind_and_listen(server, uri);
 
     if (uv_run(server->uv.loop, UV_RUN_DEFAULT)) fatal("uv_run error");
     if (uv_loop_close(server->uv.loop)) fatal("uv_loop_close error");
 
     server_del(server);
-    unlink(sock_path);
     fclose(output);
 
     return 0;

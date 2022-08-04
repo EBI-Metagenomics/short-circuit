@@ -13,7 +13,7 @@ include(cmake/compiler-options.cmake)
 include(cmake/sanitizers.cmake)
 include(cmake/CPM.cmake)
 
-cpmaddpackage(NAME c_toolbelt VERSION 0.4.0 GITHUB_REPOSITORY horta/c-toolbelt)
+cpmaddpackage(NAME c_toolbelt VERSION 0.7.2 GITHUB_REPOSITORY horta/c-toolbelt)
 cpmaddpackage(
   NAME cco VERSION 0.0.9 GITHUB_REPOSITORY
   EBI-Metagenomics/c-containers
@@ -25,17 +25,18 @@ add_library(
   src/backend.c
   src/backend_uv.c
   src/die.c
-  src/sc.c
   src/record.c
   src/record_reader.c
+  src/sc.c
   src/socket.c
+  src/uri.c
   src/warn.c
   src/watcher.c
 )
 add_library(SC::sc ALIAS sc)
 
 target_link_libraries(sc PUBLIC uv_a)
-target_link_libraries(sc PUBLIC C_TOOLBELT::c_toolbelt)
+target_link_libraries(sc PUBLIC C_TOOLBELT::ctb)
 target_link_libraries(sc PUBLIC CCO::cco)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -55,14 +56,6 @@ target_include_directories(
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )
-
-# add_executable(
-#   server
-#   src/server.c
-# )
-# target_link_libraries(server PUBLIC mt)
-
-# install(FILES mt DESTINATION bin)
 
 enable_testing()
 add_subdirectory(test)

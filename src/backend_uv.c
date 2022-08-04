@@ -4,6 +4,7 @@
 #include "record_reader.h"
 #include "sc/backend_uv.h"
 #include "sc/watcher.h"
+#include "uri.h"
 #include "warn.h"
 #include <stdlib.h>
 #include <uv.h>
@@ -28,10 +29,9 @@ struct socket_uv
 static void *buv_alloc(void);
 static void buv_init(void *, struct sc_watcher *);
 static void buv_free(void *);
-static int buv_connect(void *client, char const *);
+static int buv_connect(void *client, struct uri const *);
 static int buv_accept(void *server, void *client);
-static int buv_bind(void *server, char const *addr);
-static int buv_bind(void *server, char const *addr);
+static int buv_bind(void *server, struct uri const *);
 static int buv_listen(void *server, int backlog);
 static int buv_send(void *socket, struct sc_record const *);
 static int buv_close(void *socket);
@@ -79,7 +79,7 @@ static void on_connect_wrap(struct uv_connect_s *request, int status)
     (*uv->watcher->on_connect_success)(uv->watcher);
 }
 
-static int buv_connect(void *client, char const *addr)
+static int buv_connect(void *client, struct uri const *uri)
 {
     struct socket_uv *clt = client;
     int r = uv_pipe_init(buv_data->loop, &clt->stream.pipe, 0);
@@ -88,8 +88,8 @@ static int buv_connect(void *client, char const *addr)
         buv_error("pipe init error", r);
         return r;
     }
-    uv_pipe_connect(&clt->connect_request, &clt->stream.pipe, addr,
-                    &on_connect_wrap);
+    uv_pipe_connect(&clt->connect_request, &clt->stream.pipe,
+                    uri_pipe_filepath(uri), &on_connect_wrap);
     return r;
 }
 
@@ -181,7 +181,7 @@ static int buv_accept(void *server, void *client)
     return r;
 }
 
-static int buv_bind(void *server, char const *addr)
+static int buv_bind(void *server, struct uri const *uri)
 {
     struct socket_uv *srv = server;
 
@@ -191,7 +191,7 @@ static int buv_bind(void *server, char const *addr)
         buv_error("pipe init error", r);
         return r;
     }
-    if ((r = uv_pipe_bind(&srv->stream.pipe, addr)))
+    if ((r = uv_pipe_bind(&srv->stream.pipe, uri_pipe_filepath(uri))))
     {
         buv_error("pipe bind error", r);
         return r;

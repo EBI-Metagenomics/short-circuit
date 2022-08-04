@@ -3,15 +3,16 @@
 
 struct sc_record;
 struct sc_watcher;
+struct uri;
 
 typedef void *(alloc_fn_t)(void);
 typedef void init_fn_t(void *, struct sc_watcher *);
 typedef void free_fn_t(void *);
 
-typedef int connect_fn_t(void *, char const *addr);
+typedef int connect_fn_t(void *, struct uri const *);
 typedef int accept_fn_t(void *server, void *client);
 
-typedef int bind_fn_t(void *, char const *addr);
+typedef int bind_fn_t(void *, struct uri const *);
 typedef int listen_fn_t(void *, int backlog);
 
 typedef int send_fn_t(void *, struct sc_record const *);
