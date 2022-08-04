@@ -1,5 +1,7 @@
 #include "backend_uv.h"
 #include "backend.h"
+#include "ctb/ctb.h"
+#include "proto.h"
 #include "record.h"
 #include "record_reader.h"
 #include "sc/backend_uv.h"
@@ -24,6 +26,8 @@ struct socket_uv
     uv_buf_t write_buffer;
     struct sc_record *record;
     struct record_reader reader;
+    enum proto proto;
+    struct sockaddr_in tcp_addr;
 };
 
 static void *buv_alloc(void);
@@ -62,6 +66,8 @@ static void buv_init(void *socket, struct sc_watcher *watcher)
     uv->write_buffer = uv_buf_init(0, 0);
     uv->record = 0;
     record_reader_init(&uv->reader, uv->record);
+    uv->proto = PROTO_NOSET;
+    ctb_bzero(&uv->tcp_addr, sizeof(uv->tcp_addr));
 }
 
 static void buv_free(void *socket) { free(socket); }
@@ -79,7 +85,7 @@ static void on_connect_wrap(struct uv_connect_s *request, int status)
     (*uv->watcher->on_connect_success)(uv->watcher);
 }
 
-static int buv_connect(void *client, struct uri const *uri)
+static int connect_pipe(void *client, char const *filepath)
 {
     struct socket_uv *clt = client;
     int r = uv_pipe_init(buv_data->loop, &clt->stream.pipe, 0);
@@ -88,9 +94,47 @@ static int buv_connect(void *client, struct uri const *uri)
         buv_error("pipe init error", r);
         return r;
     }
-    uv_pipe_connect(&clt->connect_request, &clt->stream.pipe,
-                    uri_pipe_filepath(uri), &on_connect_wrap);
+    uv_pipe_connect(&clt->connect_request, &clt->stream.pipe, filepath,
+                    &on_connect_wrap);
     return r;
+}
+
+static int connect_tcp(void *client, char const *ip4, unsigned port)
+{
+    struct socket_uv *clt = client;
+    int r = uv_tcp_init(buv_data->loop, &clt->stream.tcp);
+    if (r)
+    {
+        buv_error("tcp init error", r);
+        return r;
+    }
+    r = uv_ip4_addr(ip4, (int)port, &clt->tcp_addr);
+    if (r)
+    {
+        buv_error("ip4 addr error", r);
+        return r;
+    }
+
+    struct sockaddr const *addr = (struct sockaddr const *)&clt->tcp_addr;
+    r = uv_tcp_connect(&clt->connect_request, &clt->stream.tcp, addr,
+                       &on_connect_wrap);
+    if (r)
+    {
+        buv_error("tcp connect error", r);
+        return r;
+    }
+
+    return r;
+}
+
+static int buv_connect(void *client, struct uri const *uri)
+{
+    enum proto proto = uri_scheme_protocol(uri);
+    if (proto == PROTO_PIPE)
+        return connect_pipe(client, uri_pipe_filepath(uri));
+    if (proto == PROTO_TCP)
+        return connect_tcp(client, uri_tcp_ip4(uri), uri_tcp_port(uri));
+    return 1;
 }
 
 static void alloc_wrap(uv_handle_t *handle, size_t suggested_size,
@@ -181,7 +225,7 @@ static int buv_accept(void *server, void *client)
     return r;
 }
 
-static int buv_bind(void *server, struct uri const *uri)
+static int bind_pipe(void *server, char const *filepath)
 {
     struct socket_uv *srv = server;
 
@@ -191,12 +235,47 @@ static int buv_bind(void *server, struct uri const *uri)
         buv_error("pipe init error", r);
         return r;
     }
-    if ((r = uv_pipe_bind(&srv->stream.pipe, uri_pipe_filepath(uri))))
+    if ((r = uv_pipe_bind(&srv->stream.pipe, filepath)))
     {
         buv_error("pipe bind error", r);
         return r;
     }
     return r;
+}
+
+static int bind_tcp(void *server, char const *ip4, unsigned port)
+{
+    struct socket_uv *srv = server;
+
+    int r = uv_tcp_init(buv_data->loop, &srv->stream.tcp);
+    if (r)
+    {
+        buv_error("tcp init error", r);
+        return r;
+    }
+    r = uv_ip4_addr(ip4, (int)port, &srv->tcp_addr);
+    if (r)
+    {
+        buv_error("ip4 addr error", r);
+        return r;
+    }
+
+    struct sockaddr const *addr = (struct sockaddr const *)&srv->tcp_addr;
+    if ((r = uv_tcp_bind(&srv->stream.tcp, addr, 0)))
+    {
+        buv_error("tcp bind error", r);
+        return r;
+    }
+    return r;
+}
+
+static int buv_bind(void *server, struct uri const *uri)
+{
+    enum proto proto = uri_scheme_protocol(uri);
+    if (proto == PROTO_PIPE) return bind_pipe(server, uri_pipe_filepath(uri));
+    if (proto == PROTO_TCP)
+        return bind_tcp(server, uri_tcp_ip4(uri), uri_tcp_port(uri));
+    return 1;
 }
 
 static void on_connection_wrap(struct uv_stream_s *stream, int status)

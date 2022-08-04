@@ -85,10 +85,10 @@ void uri_del(struct uri const *uri)
     free((void *)uri);
 }
 
-enum uri_scheme uri_scheme(struct uri const *uri)
+enum proto uri_scheme_protocol(struct uri const *uri)
 {
-    if (!strcmp(uri->scheme.proto, "pipe")) return SC_PIPE;
-    if (!strcmp(uri->scheme.proto, "tcp")) return SC_TCP;
+    if (!strcmp(uri->scheme.proto, "pipe")) return PROTO_PIPE;
+    if (!strcmp(uri->scheme.proto, "tcp")) return PROTO_TCP;
     assert(0);
 }
 
