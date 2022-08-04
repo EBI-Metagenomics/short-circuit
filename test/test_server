@@ -32,16 +32,18 @@ function runtime_dir {
     fatal "Failed to create runtime dir."
 }
 
+TCP_IP4=127.0.0.1
+TCP_PORT=60721
+
 SERVER_BIN=$SCRIPT_DIR/server
 GENRECORD_BIN=$SCRIPT_DIR/generate_record
 RUNTIME_DIR=$(runtime_dir)
 SOCKET_FILE=$RUNTIME_DIR/server.sock
 PIPE_URI=sc+pipe://$SOCKET_FILE
-ACTUAL_FILE=$RUNTIME_DIR/actual.txt
+TCP_URI=sc+tcp://$TCP_IP4:$TCP_PORT
+ACTUAL_PIPE_FILE=$RUNTIME_DIR/pipe_actual.txt
+ACTUAL_TCP_FILE=$RUNTIME_DIR/TCP_actual.txt
 DESIRED_FILE=$RUNTIME_DIR/desired.txt
-
-"$SERVER_BIN" "$PIPE_URI" "$ACTUAL_FILE" &
-SERVER_PID=$!
 
 function stall { sleep 0.05; }
 
@@ -67,7 +69,13 @@ function wait_socket_disappear {
     fatal "Socket $socket not found."
 }
 
+"$SERVER_BIN" "$PIPE_URI" "$ACTUAL_PIPE_FILE" &
+SERVER_PIPE_PID=$!
 wait_socket_exist "$SOCKET_FILE"
+
+"$SERVER_BIN" "$TCP_URI" "$ACTUAL_TCP_FILE" &
+SERVER_TCP_PID=$!
+sleep 0.1
 
 function proc_exist {
     pid=$1
@@ -95,30 +103,45 @@ function terminate_process {
 }
 
 function on_exit {
-    terminate_process $SERVER_PID
+    terminate_process $SERVER_PIPE_PID
     rm -f "$SOCKET_FILE" >/dev/null 2>&1
+    terminate_process $SERVER_TCP_PID
 }
 trap on_exit EXIT
 
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    NC_ARGS=(-q 0 -U)
-else
-    NC_ARGS=(-U)
-fi
+function send_records {
+    proto=$1
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        NC_ARGS=(-q 0)
+    else
+        NC_ARGS=()
+    fi
+    if [ "$proto" = "PIPE" ]; then
+        NC_ARGS+=(-U)
+        NC_DST=("$SOCKET_FILE")
+    elif [ "$proto" = "TCP" ]; then
+        NC_DST=("$TCP_IP4" "$TCP_PORT")
+    else
+        fatal "Invalid protocol."
+    fi
 
-(
-    cd "$ASSETS_DIR" >/dev/null || exit 1
+    (
+        cd "$ASSETS_DIR" >/dev/null || exit 1
 
-    $GENRECORD_BIN print-both 0 | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
-    $GENRECORD_BIN print-both 3 | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
-    $GENRECORD_BIN print-both 22 | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
+        $GENRECORD_BIN print-both 0 | nc "${NC_ARGS[@]}" "${NC_DST[@]}"
+        $GENRECORD_BIN print-both 3 | nc "${NC_ARGS[@]}" "${NC_DST[@]}"
+        $GENRECORD_BIN print-both 22 | nc "${NC_ARGS[@]}" "${NC_DST[@]}"
 
-    {
-        $GENRECORD_BIN print-both 0
-        $GENRECORD_BIN print-both 3
-        $GENRECORD_BIN print-both 22
-    } | nc "${NC_ARGS[@]}" "$SOCKET_FILE"
-)
+        {
+            $GENRECORD_BIN print-both 0
+            $GENRECORD_BIN print-both 3
+            $GENRECORD_BIN print-both 22
+        } | nc "${NC_ARGS[@]}" "${NC_DST[@]}"
+    )
+}
+
+send_records "PIPE"
+send_records "TCP"
 
 cat >"$DESIRED_FILE" <<-EOM
 parse_args
@@ -191,9 +214,8 @@ server_del
 EOM
 
 sleep 0.01
-terminate_process $SERVER_PID
+terminate_process $SERVER_PIPE_PID
 wait_socket_disappear "$SOCKET_FILE"
 
-cat "$RUNTIME_DIR"/desired.txt
-cat "$RUNTIME_DIR"/actual.txt
-diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/actual.txt
+diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/pipe_actual.txt
+diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/tcp_actual.txt

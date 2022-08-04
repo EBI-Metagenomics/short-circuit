@@ -11,18 +11,18 @@ struct uri
     char *str;
     struct
     {
-        char *lib;
-        char *proto;
+        char const *lib;
+        char const *proto;
     } scheme;
     union
     {
         struct
         {
-            char *filepath;
+            char const *filepath;
         } pipe;
         struct
         {
-            char *ip4;
+            char const *ip4;
             char *port;
         } tcp;
     };
@@ -55,8 +55,12 @@ struct uri *uri_new(char const *instr)
 
     uri->scheme.proto = ctb_strtok_s(0, &schememax, "+", &scheme_ntok);
     if (!uri->scheme.proto ||
-        (strcmp(uri->scheme.proto, "pipe") & strcmp(uri->scheme.proto, "tcp")))
+        (strcmp(uri->scheme.proto, "pipe") && strcmp(uri->scheme.proto, "tcp")))
         goto cleanup;
+
+    if (strlen(path) <= 2) goto cleanup;
+    if (*(path++) != '/') goto cleanup;
+    if (*(path++) != '/') goto cleanup;
 
     if (!strcmp(uri->scheme.proto, "pipe"))
         uri->pipe.filepath = path;
