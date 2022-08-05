@@ -1,0 +1,43 @@
+#!/bin/bash
+
+function fatal {
+    echo >&2 "$1"
+    exit 1
+}
+
+function help {
+    echo "Usage: waitsock <EVENT:appear|disappear> <SOCKET>"
+    exit 1
+}
+
+[ $# -ne 2 ] && help
+
+EVENT=$1
+SOCKET=$2
+
+[ "$EVENT" != "appear" ] && [ "$EVENT" != "disappear" ] && help
+
+function stall { sleep 0.05; }
+
+function wait_socket_appear {
+    for _ in {0..9}; do
+        if [ -S "$SOCKET" ]; then
+            return 0
+        fi
+        stall
+    done
+    fatal "Socket <$SOCKET> didn't appear in time."
+}
+
+function wait_socket_disappear {
+    for _ in {0..9}; do
+        if [ ! -S "$SOCKET" ]; then
+            return 0
+        fi
+        stall
+    done
+    fatal "Socket <$SOCKET> didn't disappear in time."
+}
+
+[ "$EVENT" == "appear" ] && wait_socket_appear || exit 0
+[ "$EVENT" == "disappear" ] && wait_socket_disappear || exit 0

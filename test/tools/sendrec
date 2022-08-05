@@ -1,0 +1,77 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+GENRECORD_BIN=$SCRIPT_DIR/genrec
+
+function fatal {
+    echo >&2 "$1"
+    exit 1
+}
+
+function help {
+    echo "Usage: sendrec <PROTOCOL:pipe|tcp> [--ip4|--port|--socket] <RECSIZE1, RECVSIZE2, ...>"
+    echo "+- Options ----------------------------------------------------------+"
+    echo "|  --ip4              Internet address. Mandatory for TCP protocol.  |"
+    echo "|  --port             Port number. Mandatory for TCP protocol.       |"
+    echo "|  --socket           File path. Mandatory for PIPE protocol.        |"
+    echo "+--------------------------------------------------------------------+"
+    exit 1
+}
+
+PROTOCOL=$1
+shift
+
+IP4=
+PORT=
+SOCKET=
+
+while :; do
+    case $1 in
+        --ip4)
+            shift
+            IP4=$1
+            ;;
+        --port)
+            shift
+            PORT=$1
+            ;;
+        --socket)
+            shift
+            SOCKET=$1
+            ;;
+        *) break ;;
+    esac
+    shift
+done
+
+if [ "$PROTOCOL" != "pipe" ] && [ "$PROTOCOL" != "tcp" ]; then
+    help
+fi
+
+test $# -eq 0 && help
+
+sizes=("$@")
+
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    NC_ARGS=(-q 0)
+else
+    NC_ARGS=()
+fi
+
+if [ "$PROTOCOL" = "pipe" ]; then
+    test -z "$SOCKET" && help
+    NC_ARGS+=(-U)
+    NC_DST=("$SOCKET")
+else
+    test -z "$IP4" && help
+    test -z "$PORT" && help
+    NC_DST=("$IP4" "$PORT")
+fi
+
+type nc >/dev/null 2>&1 || fatal "Netcat not found."
+
+{
+    for size in "${sizes[@]}"; do
+        $GENRECORD_BIN print-both "$size"
+    done
+} | nc "${NC_ARGS[@]}" "${NC_DST[@]}"

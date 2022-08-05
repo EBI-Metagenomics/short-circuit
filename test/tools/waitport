@@ -1,0 +1,43 @@
+#!/bin/bash
+
+function fatal {
+    echo >&2 "$1"
+    exit 1
+}
+
+function help {
+    echo "Usage: waitport <EVENT:listen|unlisten> <PORT>"
+    exit 1
+}
+
+[ $# -ne 2 ] && help
+
+EVENT=$1
+PORT=$2
+
+[ "$EVENT" != "listen" ] && [ "$EVENT" != "unlisten" ] && help
+
+function stall { sleep 0.05; }
+
+function wait_listen {
+    for _ in {0..9}; do
+        if lsof -i:"$PORT"; then
+            return 0
+        fi
+        stall
+    done
+    fatal "Port <$PORT> not being listened to in time."
+}
+
+function wait_unlisten {
+    for _ in {0..9}; do
+        if ! lsof -i:"$PORT"; then
+            return 0
+        fi
+        stall
+    done
+    fatal "Port <$PORT> still being listened to."
+}
+
+[ "$EVENT" == "listen" ] && wait_listen || exit 0
+[ "$EVENT" == "unlisten" ] && wait_unlisten || exit 0

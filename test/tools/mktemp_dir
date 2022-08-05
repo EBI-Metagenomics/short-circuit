@@ -1,0 +1,11 @@
+#!/bin/bash
+
+function fatal {
+    echo >&2 "$1"
+    exit 1
+}
+
+DIR=$(mktemp -d --suffix=sc 2>/dev/null) && echo -n "$DIR" && exit 0
+DIR=$(mktemp -d -t sc 2>/dev/null) && echo -n "$DIR" && exit 0
+
+fatal "Failed to create temporary directory."

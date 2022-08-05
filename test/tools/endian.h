@@ -1,5 +1,5 @@
-#ifndef TEST_ENDIAN_H
-#define TEST_ENDIAN_H
+#ifndef TEST_TOOLS_ENDIAN_H
+#define TEST_TOOLS_ENDIAN_H
 
 #include <stdint.h>
 

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+
+function fatal {
+    echo >&2 "$1"
+    exit 1
+}
+
+DIR=""
+if test -d /run; then
+    DIR=/run
+elif test -d /var/run; then
+    DIR=/var/run
+fi
+
+if ! test -z "$DIR"; then
+    DIR=$DIR/sc
+    if test -d $DIR; then
+        echo -n "$DIR"
+        return
+    fi
+    if mkdir $DIR 2>/dev/null; then
+        echo -n "$DIR"
+        return
+    fi
+fi
+
+DIR=$("$SCRIPT_DIR/mktemp_dir")
+echo -n "$DIR"

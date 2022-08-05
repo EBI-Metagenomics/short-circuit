@@ -1,0 +1,102 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+export PATH=$SCRIPT_DIR/tools:$PATH
+
+RTDIR=$(runtime_dir)
+TMPDIR=$(mktemp_dir)
+
+SOCKET_FILE=$RTDIR/server.sock
+
+ACTUAL_FILE=$TMPDIR/actual.txt
+DESIRED_FILE=$TMPDIR/desired.txt
+
+"$SCRIPT_DIR/server" "sc+pipe://$SOCKET_FILE" "$ACTUAL_FILE" &
+SERVER_PID=$!
+waitsock appear "$SOCKET_FILE"
+
+function on_exit {
+    termproc $SERVER_PID
+    rm -f "$SOCKET_FILE" >/dev/null 2>&1
+}
+trap on_exit EXIT
+
+sendrec pipe --socket "$SOCKET_FILE" 0
+sendrec pipe --socket "$SOCKET_FILE" 3
+sendrec pipe --socket "$SOCKET_FILE" 22
+sendrec pipe --socket "$SOCKET_FILE" 0 3 22
+
+termproc $SERVER_PID
+waitsock disappear "$SOCKET_FILE"
+
+cat >"$DESIRED_FILE" <<-EOM
+parse_args
+server_new
+server_uv_init
+server_init
+async_init
+signal_init
+signal_init
+idle_init
+client_init
+server_bind_and_listen
+server_on_connection_success
+client_on_accept_success
+alloc_record
+client_on_recv_success
+[0]()
+free_record
+alloc_record
+client_on_recv_eof
+close_socket
+free_record
+client_on_close
+server_on_connection_success
+client_on_accept_success
+alloc_record
+client_on_recv_success
+[3](Lor)
+free_record
+alloc_record
+client_on_recv_eof
+close_socket
+free_record
+client_on_close
+server_on_connection_success
+client_on_accept_success
+alloc_record
+client_on_recv_success
+[22](Lorem ipsum dolor sit )
+free_record
+alloc_record
+client_on_recv_eof
+close_socket
+free_record
+client_on_close
+server_on_connection_success
+client_on_accept_success
+alloc_record
+client_on_recv_success
+[0]()
+free_record
+alloc_record
+client_on_recv_success
+[3](Lor)
+free_record
+alloc_record
+client_on_recv_success
+[22](Lorem ipsum dolor sit )
+free_record
+alloc_record
+client_on_recv_eof
+close_socket
+free_record
+client_on_close
+signal_cb
+async_cb
+close_socket
+server_on_close
+server_del
+EOM
+
+diff "$DESIRED_FILE" "$ACTUAL_FILE"

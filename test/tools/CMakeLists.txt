@@ -1,0 +1,10 @@
+add_executable(genrec genrec.c)
+target_compile_features(genrec PRIVATE c_std_11)
+target_compile_options(genrec PRIVATE ${WARNING_FLAGS})
+
+file(COPY runtime_dir DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY mktemp_dir DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY sendrec DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY waitsock DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY waitport DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY termproc DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
