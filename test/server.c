@@ -52,6 +52,7 @@ static void out(char const *msg)
 {
     fputs(msg, output);
     fputc('\n', output);
+    fflush(output);
 }
 
 static void outf(char const *fmt, ...)
@@ -59,6 +60,7 @@ static void outf(char const *fmt, ...)
     va_list args;
     va_start(args, fmt);
     vfprintf(output, fmt, args);
+    fflush(output);
     va_end(args);
 }
 

@@ -32,6 +32,12 @@ function runtime_dir {
     fatal "Failed to create runtime dir."
 }
 
+function create_tmpdir {
+    dir=$(mktemp -d --suffix=sc 2>/dev/null) && echo -n "$dir" && return
+    dir=$(mktemp -d -t sc 2>/dev/null) && echo -n "$dir" && return
+    fatal "Failed to create temporary dir."
+}
+
 TCP_IP4=127.0.0.1
 TCP_PORT=60721
 
@@ -41,9 +47,10 @@ RUNTIME_DIR=$(runtime_dir)
 SOCKET_FILE=$RUNTIME_DIR/server.sock
 PIPE_URI=sc+pipe://$SOCKET_FILE
 TCP_URI=sc+tcp://$TCP_IP4:$TCP_PORT
-ACTUAL_PIPE_FILE=$RUNTIME_DIR/pipe_actual.txt
-ACTUAL_TCP_FILE=$RUNTIME_DIR/TCP_actual.txt
-DESIRED_FILE=$RUNTIME_DIR/desired.txt
+TMPDIR=$(create_tmpdir)
+ACTUAL_PIPE_FILE=$TMPDIR/PIPE_actual.txt
+ACTUAL_TCP_FILE=$TMPDIR/TCP_actual.txt
+DESIRED_FILE=$TMPDIR/desired.txt
 
 function stall { sleep 0.05; }
 
@@ -66,7 +73,29 @@ function wait_socket_disappear {
         fi
         stall
     done
-    fatal "Socket $socket not found."
+    fatal "Socket $socket didn't disappear in time."
+}
+
+function wait_start_listen {
+    port=$1
+    for _ in {0..9}; do
+        if lsof -i:"$port"; then
+            return 0
+        fi
+        stall
+    done
+    fatal "Port $port is still active."
+}
+
+function wait_stop_listen {
+    port=$1
+    for _ in {0..9}; do
+        if ! lsof -i:"$port"; then
+            return 0
+        fi
+        stall
+    done
+    fatal "Port $port is still active."
 }
 
 "$SERVER_BIN" "$PIPE_URI" "$ACTUAL_PIPE_FILE" &
@@ -75,7 +104,7 @@ wait_socket_exist "$SOCKET_FILE"
 
 "$SERVER_BIN" "$TCP_URI" "$ACTUAL_TCP_FILE" &
 SERVER_TCP_PID=$!
-sleep 0.1
+wait_start_listen "$TCP_PORT"
 
 function proc_exist {
     pid=$1
@@ -104,8 +133,8 @@ function terminate_process {
 
 function on_exit {
     terminate_process $SERVER_PIPE_PID
-    rm -f "$SOCKET_FILE" >/dev/null 2>&1
     terminate_process $SERVER_TCP_PID
+    rm -f "$SOCKET_FILE" >/dev/null 2>&1
 }
 trap on_exit EXIT
 
@@ -213,9 +242,11 @@ server_on_close
 server_del
 EOM
 
-sleep 0.01
 terminate_process $SERVER_PIPE_PID
 wait_socket_disappear "$SOCKET_FILE"
 
-diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/pipe_actual.txt
-diff "$RUNTIME_DIR"/desired.txt "$RUNTIME_DIR"/tcp_actual.txt
+terminate_process $SERVER_TCP_PID
+wait_stop_listen "$TCP_PORT"
+
+diff "$DESIRED_FILE" "$ACTUAL_PIPE_FILE"
+diff "$DESIRED_FILE" "$ACTUAL_TCP_FILE"
