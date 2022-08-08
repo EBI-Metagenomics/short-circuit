@@ -145,7 +145,7 @@ static void alloc_wrap(uv_handle_t *handle, size_t suggested_size,
 
     if (!uv->record)
     {
-        uv->record = (*record_alloc)(sz);
+        uv->record = sc_record_alloc(sz);
         record_init(uv->record);
         record_reader_init(&uv->reader, uv->record);
     }
@@ -179,7 +179,7 @@ static void read_wrap(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
             buv_error("read error", (int)nread);
             (*uv->watcher->on_recv_failure)(uv->watcher);
         }
-        (*record_free)(uv->record);
+        sc_record_free(uv->record);
         uv->record = 0;
     }
     else if (nread > 0)
@@ -197,7 +197,7 @@ static void read_wrap(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
         if (record_reader_finished(reader))
         {
             (*uv->watcher->on_recv_success)(uv->watcher, uv->record);
-            (*record_free)(uv->record);
+            sc_record_free(uv->record);
             uv->record = 0;
         }
     }
