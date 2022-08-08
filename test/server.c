@@ -115,19 +115,6 @@ static void client_on_close(struct sc_watcher *w)
     client->active = false;
 }
 
-static struct sc_record *alloc_record(uint32_t size)
-{
-    struct sc_record *record = malloc(sizeof(struct sc_record));
-    record->data = malloc(size);
-    return record;
-}
-
-static void free_record(struct sc_record *record)
-{
-    free(record->data);
-    free(record);
-}
-
 static void parse_args(int argc, char **argv)
 {
     if (argc != 3) fatal("wrong number of arguments");
@@ -254,7 +241,7 @@ int main(int argc, char **argv)
 
     struct server *server = server_new(uv_default_loop());
 
-    sc_init(SC_UV, &server->uv, alloc_record, free_record);
+    sc_init(SC_LIBUV, &server->uv, 0, 0);
 
     server_init(server);
     client_init(&server->client, server);

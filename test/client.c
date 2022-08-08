@@ -152,24 +152,11 @@ static void on_close(struct sc_watcher *w)
     uv_close((struct uv_handle_s *)&client->sigint, 0);
 }
 
-static struct sc_record *alloc_record(uint32_t size)
-{
-    struct sc_record *record = malloc(sizeof(struct sc_record));
-    record->data = malloc(size);
-    return record;
-}
-
-static void free_record(struct sc_record *record)
-{
-    free(record->data);
-    free(record);
-}
-
 static struct client *client_new(struct uv_loop_s *loop)
 {
     struct client *client = malloc(sizeof(*client));
     if (!client) fatal("not enough memory");
-    client->record = alloc_record(RECORD_MAX_SIZE);
+    client->record = sc_record_alloc(RECORD_MAX_SIZE);
     if (!client->record) fatal("not enough memory");
     client->uv.loop = loop;
     return client;
@@ -201,7 +188,7 @@ static void client_init(struct client *client)
 static void client_del(struct client *client)
 {
     sc_socket_del(client->socket);
-    free_record(client->record);
+    sc_record_free(client->record);
     free(client);
 }
 
@@ -229,7 +216,7 @@ int main(int argc, char **argv)
 
     struct client *client = client_new(uv_default_loop());
 
-    sc_init(SC_UV, &client->uv, alloc_record, free_record);
+    sc_init(SC_LIBUV, &client->uv, 0, 0);
 
     client_init(client);
 

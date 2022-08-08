@@ -4,7 +4,7 @@
 enum sc_backend
 {
     SC_NOTSET,
-    SC_UV,
+    SC_LIBUV,
 };
 
 #endif
