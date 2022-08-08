@@ -15,7 +15,11 @@ elif test -d /var/run; then
 fi
 
 if ! test -z "$DIR"; then
-    exit 0
+    if touch "$DIR/touch_this_OPWMA" 2>/dev/null; then
+        rm "$DIR/touch_this_OPWMA"
+        echo -n "$DIR"
+        exit 0
+    fi
 fi
 
 DIR=$("$SCRIPT_DIR/mktemp_dir")
