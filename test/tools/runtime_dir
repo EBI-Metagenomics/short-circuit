@@ -15,15 +15,7 @@ elif test -d /var/run; then
 fi
 
 if ! test -z "$DIR"; then
-    DIR=$DIR/sc
-    if test -d $DIR; then
-        echo -n "$DIR"
-        return
-    fi
-    if mkdir $DIR 2>/dev/null; then
-        echo -n "$DIR"
-        return
-    fi
+    exit 0
 fi
 
 DIR=$("$SCRIPT_DIR/mktemp_dir")
