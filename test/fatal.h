@@ -1,5 +1,5 @@
-#ifndef TEST_HELPER_H
-#define TEST_HELPER_H
+#ifndef TEST_FATAL_H
+#define TEST_FATAL_H
 
 #include <stdio.h>
 #include <stdlib.h>

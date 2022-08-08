@@ -29,71 +29,12 @@ termproc $SERVER_PID
 waitport unlisten "$PORT"
 
 cat >"$DESIRED_FILE" <<-EOM
-server_new
-server_init
-async_init
-signal_init
-signal_init
-idle_init
-client_init
-server_bind_and_listen
-server_on_connection_success
-client_on_accept_success
-alloc_record
-client_on_recv_success
 [0]()
-free_record
-alloc_record
-client_on_recv_eof
-close_socket
-free_record
-client_on_close
-server_on_connection_success
-client_on_accept_success
-alloc_record
-client_on_recv_success
 [3](Lor)
-free_record
-alloc_record
-client_on_recv_eof
-close_socket
-free_record
-client_on_close
-server_on_connection_success
-client_on_accept_success
-alloc_record
-client_on_recv_success
 [22](Lorem ipsum dolor sit )
-free_record
-alloc_record
-client_on_recv_eof
-close_socket
-free_record
-client_on_close
-server_on_connection_success
-client_on_accept_success
-alloc_record
-client_on_recv_success
 [0]()
-free_record
-alloc_record
-client_on_recv_success
 [3](Lor)
-free_record
-alloc_record
-client_on_recv_success
 [22](Lorem ipsum dolor sit )
-free_record
-alloc_record
-client_on_recv_eof
-close_socket
-free_record
-client_on_close
-signal_cb
-async_cb
-close_socket
-server_on_close
-server_del
 EOM
 
 diff "$DESIRED_FILE" "$ACTUAL_FILE"

@@ -1,4 +1,4 @@
-#include "helper.h"
+#include "fatal.h"
 #include "sc/sc.h"
 #include <stdarg.h>
 #include <stdbool.h>

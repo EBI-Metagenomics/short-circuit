@@ -1,3 +1,6 @@
+find_program(SC_NC nc REQUIRED)
+find_program(SC_LSOF lsof REQUIRED)
+
 add_executable(genrec genrec.c)
 target_compile_features(genrec PRIVATE c_std_11)
 target_compile_options(genrec PRIVATE ${WARNING_FLAGS})
