@@ -6,12 +6,12 @@ export PATH=$SCRIPT_DIR/tools:$PATH
 TMPDIR=$(mktemp_dir)
 
 IP4=127.0.0.1
-PORT=60721
+PORT=60722
 
 ACTUAL_FILE=$TMPDIR/actual.txt
 DESIRED_FILE=$TMPDIR/desired.txt
 
-"$SCRIPT_DIR/server" "sc+tcp://$IP4:$PORT" "$ACTUAL_FILE" &
+"$SCRIPT_DIR/client" "sc+tcp://$IP4:$PORT" "$ACTUAL_FILE" &
 SERVER_PID=$!
 waitport listen "$PORT"
 

@@ -105,7 +105,7 @@ char const *uri_tcp_ip4(struct uri const *uri) { return uri->tcp.ip4; }
 
 unsigned uri_tcp_port(struct uri const *uri)
 {
-    return uri->tcp.port ? (unsigned)strtol(uri->tcp.port, 0, 10) : 0;
+    return (unsigned)strtol(uri->tcp.port, 0, 10);
 }
 
 #ifndef NS_INADDRSZ

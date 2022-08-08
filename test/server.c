@@ -100,7 +100,6 @@ static void server_on_close(struct sc_watcher *w)
     struct server *server = w->data;
     uv_close((struct uv_handle_s *)&server->sigterm, 0);
     uv_close((struct uv_handle_s *)&server->sigint, 0);
-    uv_close((struct uv_handle_s *)&server->idle, 0);
 }
 
 static void client_on_accept_success(struct sc_watcher *w)
@@ -181,7 +180,10 @@ static void idle_cb(struct uv_idle_s *handle)
     if (!server->client.active && server->terminate == CLIENT)
         server->terminate = SERVER;
     else if (server->terminate == SERVER)
+    {
+        uv_close((struct uv_handle_s *)&server->idle, 0);
         close_socket(server->socket);
+    }
 }
 
 static void async_init(struct server *server)
@@ -216,12 +218,6 @@ static void idle_init(struct server *server)
     server->idle.data = server;
 }
 
-static void server_uv_init(struct server *server, struct uv_loop_s *loop)
-{
-    out(__FUNCTION__);
-    server->uv.loop = loop;
-}
-
 static void server_init(struct server *server)
 {
     out(__FUNCTION__);
@@ -242,7 +238,7 @@ static void server_init(struct server *server)
     server->terminate = NOTSET;
 }
 
-void client_init(struct client *client, struct server *server)
+static void client_init(struct client *client, struct server *server)
 {
     out(__FUNCTION__);
     client->server = server;
@@ -259,21 +255,24 @@ void client_init(struct client *client, struct server *server)
     client->active = false;
 }
 
-static struct server *server_new(void)
+static struct server *server_new(struct uv_loop_s *loop)
 {
     out(__FUNCTION__);
     struct server *server = malloc(sizeof(*server));
     if (!server) fatal("not enough memory");
+    server->uv.loop = loop;
     return server;
 }
 
 static void server_del(struct server *server)
 {
     out(__FUNCTION__);
+    sc_socket_del(server->client.socket);
+    sc_socket_del(server->socket);
     free(server);
 }
 
-void server_bind_and_listen(struct server *server, char const *uri)
+static void server_bind_and_listen(struct server *server, char const *uri)
 {
     out(__FUNCTION__);
     if (sc_socket_bind(server->socket, uri)) fatal("sc_socket_bind error");
@@ -285,8 +284,7 @@ int main(int argc, char **argv)
 {
     parse_args(argc, argv);
 
-    struct server *server = server_new();
-    server_uv_init(server, uv_default_loop());
+    struct server *server = server_new(uv_default_loop());
 
     sc_init(SC_UV, &server->uv, alloc_record, free_record);
 

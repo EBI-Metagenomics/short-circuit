@@ -61,6 +61,7 @@ static void buv_init(void *socket, struct sc_watcher *watcher)
 
     ((struct uv_handle_s *)(&uv->stream.pipe))->data = uv;
     ((struct uv_stream_s *)(&uv->stream.pipe))->data = uv;
+    uv->connect_request.data = uv;
 
     uv->write_request.data = uv;
     uv->write_buffer = uv_buf_init(0, 0);
@@ -85,9 +86,8 @@ static void on_connect_wrap(struct uv_connect_s *request, int status)
     (*uv->watcher->on_connect_success)(uv->watcher);
 }
 
-static int connect_pipe(void *client, char const *filepath)
+static int connect_pipe(struct socket_uv *clt, char const *filepath)
 {
-    struct socket_uv *clt = client;
     int r = uv_pipe_init(buv_data->loop, &clt->stream.pipe, 0);
     if (r)
     {
@@ -99,9 +99,8 @@ static int connect_pipe(void *client, char const *filepath)
     return r;
 }
 
-static int connect_tcp(void *client, char const *ip4, unsigned port)
+static int connect_tcp(struct socket_uv *clt, char const *ip4, unsigned port)
 {
-    struct socket_uv *clt = client;
     int r = uv_tcp_init(buv_data->loop, &clt->stream.tcp);
     if (r)
     {
@@ -129,11 +128,11 @@ static int connect_tcp(void *client, char const *ip4, unsigned port)
 
 static int buv_connect(void *client, struct uri const *uri)
 {
+    struct socket_uv *clt = client;
     enum proto proto = uri_scheme_protocol(uri);
-    if (proto == PROTO_PIPE)
-        return connect_pipe(client, uri_pipe_filepath(uri));
+    if (proto == PROTO_PIPE) return connect_pipe(clt, uri_pipe_filepath(uri));
     if (proto == PROTO_TCP)
-        return connect_tcp(client, uri_tcp_ip4(uri), uri_tcp_port(uri));
+        return connect_tcp(clt, uri_tcp_ip4(uri), uri_tcp_port(uri));
     return 1;
 }
 
