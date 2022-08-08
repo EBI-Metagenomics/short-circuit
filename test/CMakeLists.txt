@@ -16,4 +16,7 @@ target_link_libraries(sc PRIVATE uv_a)
 target_compile_features(client PRIVATE c_std_11)
 target_compile_options(client PRIVATE ${WARNING_FLAGS})
 
+file(COPY test_client_tcp DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME client_tcp COMMAND test_client_tcp)
+
 add_subdirectory(tools)

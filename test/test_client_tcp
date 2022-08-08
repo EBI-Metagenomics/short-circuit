@@ -8,10 +8,17 @@ TMPDIR=$(mktemp_dir)
 IP4=127.0.0.1
 PORT=60722
 
+INPUT_FILE=$TMPDIR/input.txt
 ACTUAL_FILE=$TMPDIR/actual.txt
 DESIRED_FILE=$TMPDIR/desired.txt
 
-"$SCRIPT_DIR/client" "sc+tcp://$IP4:$PORT" "$ACTUAL_FILE" &
+cat >"$INPUT_FILE" <<-EOM
+First line
+Second line
+Third line
+EOM
+
+"$SCRIPT_DIR/client" "sc+tcp://$IP4:$PORT" "$INPUT_FILE" "$ACTUAL_FILE" &
 SERVER_PID=$!
 waitport listen "$PORT"
 

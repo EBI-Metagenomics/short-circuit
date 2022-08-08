@@ -1,0 +1,49 @@
+#!/bin/bash
+
+function fatal {
+    echo >&2 "$1"
+    exit 1
+}
+
+function help {
+    echo "Usage: recvrec [--ip4|--port]"
+    echo "+- Options ------------------------------+"
+    echo "|  --ip4              Internet address.  |"
+    echo "|  --port             Port number.       |"
+    echo "+----------------------------------------+"
+    exit 1
+}
+
+IP4=
+PORT=
+
+while :; do
+    case $1 in
+        --ip4)
+            shift
+            IP4=$1
+            ;;
+        --port)
+            shift
+            PORT=$1
+            ;;
+        *) break ;;
+    esac
+    shift
+done
+
+test $# -ne 0 && help
+
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    NC_ARGS=(-q 0)
+else
+    NC_ARGS=()
+fi
+
+test -z "$IP4" && help
+test -z "$PORT" && help
+NC_DST=("$IP4" "$PORT")
+
+type nc >/dev/null 2>&1 || fatal "Netcat not found."
+
+nc "${NC_ARGS[@]}" -l "${NC_DST[@]}"

@@ -1,15 +1,9 @@
 #include "endian.h"
+#include "fatal.h"
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-static void fatal(char const *msg)
-{
-    fputs(msg, stderr);
-    fputc('\n', stderr);
-    exit(1);
-}
 
 static char const paragraph[] =
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod "
@@ -87,8 +81,7 @@ void print_both(unsigned long size)
 
 int main(int argc, char **argv)
 {
-    if (argc != 3)
-        fatal("Usage: generate_record print-size|print-data|print-both SIZE");
+    if (argc != 3) fatal("Usage: genrec print-size|print-data|print-both SIZE");
 
     enum cmd cmd = parse_cmd(argv[1]);
     unsigned long size = parse_size(argv[2]);
