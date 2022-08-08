@@ -1,3 +1,4 @@
+#include "helper.h"
 #include "sc/sc.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -27,13 +28,6 @@ struct client
     bool ready_send;
 };
 
-static void fatal(char const *msg)
-{
-    fputs(msg, stderr);
-    fputc('\n', stderr);
-    exit(1);
-}
-
 static char const *uri = 0;
 static FILE *input = 0;
 static FILE *output = 0;
@@ -57,7 +51,7 @@ static void outf(char const *fmt, ...)
 static void close_socket(struct sc_socket *socket)
 {
     out(__FUNCTION__);
-    if (sc_socket_close(socket)) fatal("sc_socket_close error");
+    if (sc_socket_close(socket)) fatal("sc_socket_close");
 }
 
 static void print_record(struct sc_record const *record)
@@ -81,7 +75,7 @@ static void signal_cb(struct uv_signal_s *handle, int signum)
     assert(signum == SIGTERM || signum == SIGINT);
     struct client *client = handle->data;
     if (client->terminate) return;
-    if (uv_async_send(&client->async)) fatal("uv_async_send error");
+    if (uv_async_send(&client->async)) fatal("uv_async_send");
 }
 
 static void record_setup(struct sc_record *record, char const *msg)
@@ -108,7 +102,7 @@ static void idle_cb(struct uv_idle_s *handle)
         {
             record_setup(client->record, str);
             if (sc_socket_send(client->socket, client->record))
-                fatal("sc_socket_send error");
+                fatal("sc_socket_send");
             client->ready_send = false;
             client->input_eof = feof(input);
         }
@@ -119,8 +113,7 @@ static void idle_cb(struct uv_idle_s *handle)
             else
             {
                 if (!(client->input_eof = feof(input))) fatal("input error");
-                client->terminate = true;
-                if (uv_async_send(&client->async)) fatal("uv_async_send error");
+                if (uv_async_send(&client->async)) fatal("uv_async_send");
             }
         }
     }
@@ -130,7 +123,7 @@ static void async_init(struct client *client)
 {
     out(__FUNCTION__);
     if (uv_async_init(client->uv.loop, &client->async, async_cb))
-        fatal("uv_async_init error");
+        fatal("uv_async_init");
 
     client->async.data = client;
 }
@@ -139,10 +132,9 @@ static void signal_init(struct client *client, struct uv_signal_s *signal,
                         uv_signal_cb signal_cb, int signum)
 {
     out(__FUNCTION__);
-    if (uv_signal_init(client->uv.loop, signal)) fatal("uv_signal_init error");
+    if (uv_signal_init(client->uv.loop, signal)) fatal("uv_signal_init");
 
-    if (uv_signal_start(signal, signal_cb, signum))
-        fatal("uv_signal_start error");
+    if (uv_signal_start(signal, signal_cb, signum)) fatal("uv_signal_start");
 
     signal->data = client;
 }
@@ -150,10 +142,9 @@ static void signal_init(struct client *client, struct uv_signal_s *signal,
 static void idle_init(struct client *client)
 {
     out(__FUNCTION__);
-    if (uv_idle_init(client->uv.loop, &client->idle))
-        fatal("uv_idle_init error");
+    if (uv_idle_init(client->uv.loop, &client->idle)) fatal("uv_idle_init");
 
-    if (uv_idle_start(&client->idle, idle_cb)) fatal("uv_idle_start error");
+    if (uv_idle_start(&client->idle, idle_cb)) fatal("uv_idle_start");
 
     client->idle.data = client;
 }
@@ -243,7 +234,7 @@ static void client_init(struct client *client)
     client->watcher.on_close = &on_close;
 
     if (!(client->socket = sc_socket_new(&client->watcher)))
-        fatal("sc_socket_new error");
+        fatal("sc_socket_new");
 
     client->terminate = false;
     client->input_eof = false;
@@ -276,8 +267,7 @@ static void parse_args(int argc, char **argv)
 static void client_connect(struct client *client, char const *uri)
 {
     out(__FUNCTION__);
-    if (sc_socket_connect(client->socket, uri))
-        fatal("sc_socket_connect error");
+    if (sc_socket_connect(client->socket, uri)) fatal("sc_socket_connect");
 }
 
 int main(int argc, char **argv)
@@ -292,8 +282,8 @@ int main(int argc, char **argv)
 
     client_connect(client, uri);
 
-    if (uv_run(client->uv.loop, UV_RUN_DEFAULT)) fatal("uv_run error");
-    if (uv_loop_close(client->uv.loop)) fatal("uv_loop_close error");
+    if (uv_run(client->uv.loop, UV_RUN_DEFAULT)) fatal("uv_run");
+    if (uv_loop_close(client->uv.loop)) fatal("uv_loop_close");
 
     client_del(client);
     fclose(output);

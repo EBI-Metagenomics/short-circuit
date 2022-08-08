@@ -1,3 +1,4 @@
+#include "helper.h"
 #include "sc/sc.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -41,13 +42,6 @@ struct server
 static char const *uri = 0;
 static FILE *output = 0;
 
-static void fatal(char const *msg)
-{
-    fputs(msg, stderr);
-    fputc('\n', stderr);
-    exit(1);
-}
-
 static void out(char const *msg)
 {
     fputs(msg, output);
@@ -67,7 +61,7 @@ static void outf(char const *fmt, ...)
 static void close_socket(struct sc_socket *socket)
 {
     out(__FUNCTION__);
-    if (sc_socket_close(socket)) fatal("sc_socket_close error");
+    if (sc_socket_close(socket)) fatal("sc_socket_close");
 }
 
 static void print_record(struct sc_record const *record)
@@ -170,7 +164,7 @@ static void signal_cb(struct uv_signal_s *handle, int signum)
     assert(signum == SIGTERM || signum == SIGINT);
     struct server *server = handle->data;
     if (server->terminate) return;
-    if (uv_async_send(&server->async)) fatal("uv_async_send error");
+    if (uv_async_send(&server->async)) fatal("uv_async_send");
 }
 
 static void idle_cb(struct uv_idle_s *handle)
@@ -190,7 +184,7 @@ static void async_init(struct server *server)
 {
     out(__FUNCTION__);
     if (uv_async_init(server->uv.loop, &server->async, async_cb))
-        fatal("uv_async_init error");
+        fatal("uv_async_init");
 
     server->async.data = server;
 }
@@ -199,10 +193,9 @@ static void signal_init(struct server *server, struct uv_signal_s *signal,
                         uv_signal_cb signal_cb, int signum)
 {
     out(__FUNCTION__);
-    if (uv_signal_init(server->uv.loop, signal)) fatal("uv_signal_init error");
+    if (uv_signal_init(server->uv.loop, signal)) fatal("uv_signal_init");
 
-    if (uv_signal_start(signal, signal_cb, signum))
-        fatal("uv_signal_start error");
+    if (uv_signal_start(signal, signal_cb, signum)) fatal("uv_signal_start");
 
     signal->data = server;
 }
@@ -210,10 +203,9 @@ static void signal_init(struct server *server, struct uv_signal_s *signal,
 static void idle_init(struct server *server)
 {
     out(__FUNCTION__);
-    if (uv_idle_init(server->uv.loop, &server->idle))
-        fatal("uv_idle_init error");
+    if (uv_idle_init(server->uv.loop, &server->idle)) fatal("uv_idle_init");
 
-    if (uv_idle_start(&server->idle, idle_cb)) fatal("uv_idle_start error");
+    if (uv_idle_start(&server->idle, idle_cb)) fatal("uv_idle_start");
 
     server->idle.data = server;
 }
@@ -233,7 +225,7 @@ static void server_init(struct server *server)
     server->watcher.on_close = &server_on_close;
 
     if (!(server->socket = sc_socket_new(&server->watcher)))
-        fatal("sc_socket_new error");
+        fatal("sc_socket_new");
 
     server->terminate = NOTSET;
 }
@@ -250,7 +242,7 @@ static void client_init(struct client *client, struct server *server)
     client->watcher.on_close = &client_on_close;
 
     if (!(client->socket = sc_socket_new(&client->watcher)))
-        fatal("sc_socket_new error");
+        fatal("sc_socket_new");
 
     client->active = false;
 }
@@ -275,9 +267,9 @@ static void server_del(struct server *server)
 static void server_bind_and_listen(struct server *server, char const *uri)
 {
     out(__FUNCTION__);
-    if (sc_socket_bind(server->socket, uri)) fatal("sc_socket_bind error");
+    if (sc_socket_bind(server->socket, uri)) fatal("sc_socket_bind");
 
-    if (sc_socket_listen(server->socket, 4)) fatal("sc_socket_listen error");
+    if (sc_socket_listen(server->socket, 4)) fatal("sc_socket_listen");
 }
 
 int main(int argc, char **argv)
@@ -293,8 +285,8 @@ int main(int argc, char **argv)
 
     server_bind_and_listen(server, uri);
 
-    if (uv_run(server->uv.loop, UV_RUN_DEFAULT)) fatal("uv_run error");
-    if (uv_loop_close(server->uv.loop)) fatal("uv_loop_close error");
+    if (uv_run(server->uv.loop, UV_RUN_DEFAULT)) fatal("uv_run");
+    if (uv_loop_close(server->uv.loop)) fatal("uv_loop_close");
 
     server_del(server);
     fclose(output);
