@@ -31,37 +31,13 @@ struct client
 static char const *uri = 0;
 static FILE *input = 0;
 
-static void out(char const *msg)
-{
-    puts(msg);
-    fflush(stdout);
-}
-
-static void outf(char const *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(stdout, fmt, args);
-    fflush(stdout);
-    va_end(args);
-}
-
 static void close_socket(struct sc_socket *socket)
 {
-    out(__FUNCTION__);
     if (sc_socket_close(socket)) fatal("sc_socket_close");
-}
-
-static void print_record(struct sc_record const *record)
-{
-    char const *msg = (char const *)record->data;
-    unsigned size = sc_record_size(record);
-    outf("[%u](%.*s)\n", size, (int)size, msg);
 }
 
 static void async_cb(struct uv_async_s *handle)
 {
-    out(__FUNCTION__);
     struct client *client = handle->data;
     client->terminate = true;
     uv_close((struct uv_handle_s *)&client->async, 0);
@@ -69,7 +45,6 @@ static void async_cb(struct uv_async_s *handle)
 
 static void signal_cb(struct uv_signal_s *handle, int signum)
 {
-    out(__FUNCTION__);
     (void)signum;
     assert(signum == SIGTERM || signum == SIGINT);
     struct client *client = handle->data;
@@ -128,7 +103,6 @@ static void idle_cb(struct uv_idle_s *handle)
 
 static void async_init(struct client *client)
 {
-    out(__FUNCTION__);
     if (uv_async_init(client->uv.loop, &client->async, async_cb))
         fatal("uv_async_init");
 
@@ -138,7 +112,6 @@ static void async_init(struct client *client)
 static void signal_init(struct client *client, struct uv_signal_s *signal,
                         uv_signal_cb signal_cb, int signum)
 {
-    out(__FUNCTION__);
     if (uv_signal_init(client->uv.loop, signal)) fatal("uv_signal_init");
 
     if (uv_signal_start(signal, signal_cb, signum)) fatal("uv_signal_start");
@@ -148,7 +121,6 @@ static void signal_init(struct client *client, struct uv_signal_s *signal,
 
 static void idle_init(struct client *client)
 {
-    out(__FUNCTION__);
     if (uv_idle_init(client->uv.loop, &client->idle)) fatal("uv_idle_init");
 
     if (uv_idle_start(&client->idle, idle_cb)) fatal("uv_idle_start");
@@ -158,43 +130,30 @@ static void idle_init(struct client *client)
 
 static void on_connect_success(struct sc_watcher *w)
 {
-    out(__FUNCTION__);
     struct client *client = w->data;
     client->ready_send = true;
 }
 
 static void on_connect_failure(struct sc_watcher *w)
 {
-    out(__FUNCTION__);
     (void)w;
     fatal("failed to connect");
 }
 
-static void on_recv_success(struct sc_watcher *w, struct sc_record *record)
-{
-    out(__FUNCTION__);
-    print_record(record);
-    struct client *client = w->data;
-    if (client->terminate) close_socket(client->socket);
-}
-
 static void on_recv_eof(struct sc_watcher *w)
 {
-    out(__FUNCTION__);
     struct client *client = w->data;
     close_socket(client->socket);
 }
 
 static void on_send_success(struct sc_watcher *w)
 {
-    out(__FUNCTION__);
     struct client *client = w->data;
     client->ready_send = true;
 }
 
 static void on_close(struct sc_watcher *w)
 {
-    out(__FUNCTION__);
     struct client *client = w->data;
     uv_close((struct uv_handle_s *)&client->sigterm, 0);
     uv_close((struct uv_handle_s *)&client->sigint, 0);
@@ -202,19 +161,16 @@ static void on_close(struct sc_watcher *w)
 
 static struct sc_record *alloc_record(uint32_t size)
 {
-    out(__FUNCTION__);
     return malloc(sizeof(struct sc_record) + size);
 }
 
 static void free_record(struct sc_record *record)
 {
-    out(__FUNCTION__);
     free(record);
 }
 
 static struct client *client_new(struct uv_loop_s *loop)
 {
-    out(__FUNCTION__);
     struct client *client = malloc(sizeof(*client));
     if (!client) fatal("not enough memory");
     client->record = alloc_record(RECORD_MAX_SIZE);
@@ -225,7 +181,6 @@ static struct client *client_new(struct uv_loop_s *loop)
 
 static void client_init(struct client *client)
 {
-    out(__FUNCTION__);
     async_init(client);
     signal_init(client, &client->sigterm, signal_cb, SIGTERM);
     signal_init(client, &client->sigint, signal_cb, SIGINT);
@@ -235,7 +190,6 @@ static void client_init(struct client *client)
     client->watcher.data = client;
     client->watcher.on_connect_success = &on_connect_success;
     client->watcher.on_connect_failure = &on_connect_failure;
-    client->watcher.on_recv_success = &on_recv_success;
     client->watcher.on_recv_eof = &on_recv_eof;
     client->watcher.on_send_success = &on_send_success;
     client->watcher.on_close = &on_close;
@@ -250,7 +204,6 @@ static void client_init(struct client *client)
 
 static void client_del(struct client *client)
 {
-    out(__FUNCTION__);
     sc_socket_del(client->socket);
     free_record(client->record);
     free(client);
@@ -267,12 +220,10 @@ static void parse_args(int argc, char **argv)
     if (argc != 3) usage();
     uri = argv[1];
     if (!(input = fopen(argv[2], "r"))) fatal("failed to open input");
-    out(__FUNCTION__);
 }
 
 static void client_connect(struct client *client, char const *uri)
 {
-    out(__FUNCTION__);
     if (sc_socket_connect(client->socket, uri)) fatal("sc_socket_connect");
 }
 
