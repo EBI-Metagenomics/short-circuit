@@ -13,6 +13,8 @@ RECV_RECORDS_FILE=$TMPDIR/received.records
 ACTUAL_FILE=$TMPDIR/actual.txt
 DESIRED_FILE=$TMPDIR/desired.txt
 
+echo "$TMPDIR"
+
 cat >"$MESSAGES_FILE" <<-EOM
 First message
 Second message
@@ -20,16 +22,19 @@ Third message
 EOM
 
 cat >"$DESIRED_FILE" <<-EOM
-[13] (First message)
-[14] (Second message)
-[13] (Third message)
+[14] (First message
+)
+[15] (Second message
+)
+[14] (Third message
+)
 EOM
 
 recvrec --ip4 "$IP4" --port "$PORT" >"$RECV_RECORDS_FILE" &
 RECVREC_PID=$!
 waitport listen "$PORT"
 
-"$SCRIPT_DIR/client" "sc+tcp://$IP4:$PORT" "$MESSAGES_FILE" &
+"$SCRIPT_DIR/client" "sc+tcp://$IP4:$PORT" "$MESSAGES_FILE"
 CLIENT_PID=$!
 waitproc $CLIENT_PID 2
 

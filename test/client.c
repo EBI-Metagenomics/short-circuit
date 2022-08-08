@@ -60,13 +60,6 @@ static void record_setup(struct sc_record *record, char const *msg)
     memcpy(record->data, msg, size);
 }
 
-static void remove_newline(char *str)
-{
-    while (*str && *str != '\n')
-        ++str;
-    if (*str) *str = 0;
-}
-
 static void idle_cb(struct uv_idle_s *handle)
 {
     struct client *client = handle->data;
@@ -82,7 +75,6 @@ static void idle_cb(struct uv_idle_s *handle)
         char *str = (char *)client->record->data;
         if (fgets(str, RECORD_MAX_SIZE, input))
         {
-            remove_newline(str);
             record_setup(client->record, str);
             if (sc_socket_send(client->socket, client->record))
                 fatal("sc_socket_send");
