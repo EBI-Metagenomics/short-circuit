@@ -10,7 +10,7 @@
 
 enum
 {
-    RECORD_MAX_SIZE = 1024,
+    MSG_MAX_SIZE = 1024,
 };
 
 struct client
@@ -21,7 +21,7 @@ struct client
     struct uv_signal_s sigint;
     struct uv_idle_s idle;
 
-    struct sc_record *record;
+    struct sc_msg *msg;
     struct sc_socket *socket;
     struct sc_watcher watcher;
     bool terminate;
@@ -53,11 +53,11 @@ static void signal_cb(struct uv_signal_s *handle, int signum)
     if (uv_async_send(&client->async)) fatal("uv_async_send");
 }
 
-static void record_setup(struct sc_record *record, char const *msg)
+static void msg_setup(struct sc_msg *msg, char const *str)
 {
-    unsigned size = strlen(msg);
-    sc_record_set_size(record, size);
-    memcpy(record->data, msg, size);
+    unsigned size = strlen(str);
+    sc_msg_set_size(msg, size);
+    memcpy(msg->data, str, size);
 }
 
 static void idle_cb(struct uv_idle_s *handle)
@@ -72,11 +72,11 @@ static void idle_cb(struct uv_idle_s *handle)
 
     if (!client->input_eof && client->ready_send)
     {
-        char *str = (char *)client->record->data;
-        if (fgets(str, RECORD_MAX_SIZE, input))
+        char *str = (char *)client->msg->data;
+        if (fgets(str, MSG_MAX_SIZE, input))
         {
-            record_setup(client->record, str);
-            if (sc_socket_send(client->socket, client->record))
+            msg_setup(client->msg, str);
+            if (sc_socket_send(client->socket, client->msg))
                 fatal("sc_socket_send");
             client->ready_send = false;
             client->input_eof = feof(input);
@@ -156,8 +156,8 @@ static struct client *client_new(struct uv_loop_s *loop)
 {
     struct client *client = malloc(sizeof(*client));
     if (!client) fatal("not enough memory");
-    client->record = sc_record_alloc(RECORD_MAX_SIZE);
-    if (!client->record) fatal("not enough memory");
+    client->msg = sc_msg_alloc(MSG_MAX_SIZE);
+    if (!client->msg) fatal("not enough memory");
     client->uv.loop = loop;
     return client;
 }
@@ -188,7 +188,7 @@ static void client_init(struct client *client)
 static void client_del(struct client *client)
 {
     sc_socket_del(client->socket);
-    sc_record_free(client->record);
+    sc_msg_free(client->msg);
     free(client);
 }
 

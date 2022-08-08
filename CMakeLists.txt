@@ -25,8 +25,8 @@ add_library(
   src/backend.c
   src/backend_uv.c
   src/die.c
-  src/record.c
-  src/record_reader.c
+  src/msg.c
+  src/msg_reader.c
   src/sc.c
   src/socket.c
   src/uri.c

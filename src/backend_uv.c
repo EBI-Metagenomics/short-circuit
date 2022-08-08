@@ -1,9 +1,9 @@
 #include "backend_uv.h"
 #include "backend.h"
 #include "ctb/ctb.h"
+#include "msg.h"
+#include "msg_reader.h"
 #include "proto.h"
-#include "record.h"
-#include "record_reader.h"
 #include "sc/backend_uv.h"
 #include "sc/watcher.h"
 #include "uri.h"
@@ -24,8 +24,8 @@ struct socket_uv
     struct uv_connect_s connect_request;
     struct uv_write_s write_request;
     uv_buf_t write_buffers[2];
-    struct sc_record *record;
-    struct record_reader reader;
+    struct sc_msg *msg;
+    struct msg_reader reader;
     enum proto proto;
     struct sockaddr_in tcp_addr;
 };
@@ -37,7 +37,7 @@ static int buv_connect(void *client, struct uri const *);
 static int buv_accept(void *server, void *client);
 static int buv_bind(void *server, struct uri const *);
 static int buv_listen(void *server, int backlog);
-static int buv_send(void *socket, struct sc_record const *);
+static int buv_send(void *socket, struct sc_msg const *);
 static int buv_close(void *socket);
 static void buv_error(char const *msg, int status);
 
@@ -66,7 +66,7 @@ static void buv_init(void *socket, struct sc_watcher *watcher)
     uv->write_request.data = uv;
     uv->write_buffers[0] = uv_buf_init(0, 0);
     uv->write_buffers[1] = uv_buf_init(0, 0);
-    uv->record = 0;
+    uv->msg = 0;
     uv->proto = PROTO_NOSET;
     ctb_bzero(&uv->tcp_addr, sizeof(uv->tcp_addr));
 }
@@ -140,27 +140,27 @@ static void alloc_wrap(uv_handle_t *handle, size_t suggested_size,
                        uv_buf_t *buffer)
 {
     struct socket_uv *uv = handle->data;
-    struct record_reader *reader = &uv->reader;
+    struct msg_reader *reader = &uv->reader;
     unsigned sz = (unsigned)suggested_size;
 
-    if (!uv->record)
+    if (!uv->msg)
     {
-        uv->record = sc_record_alloc(sz);
-        record_init(uv->record);
-        record_reader_init(&uv->reader, uv->record);
+        uv->msg = sc_msg_alloc(sz);
+        msg_init(uv->msg);
+        msg_reader_init(&uv->reader, uv->msg);
     }
 
-    unsigned hsize = record_reader_avail_head_size(reader);
+    unsigned hsize = msg_reader_avail_head_size(reader);
     unsigned avail = 0;
     if (hsize > 0)
     {
-        buffer->base = (char *)record_reader_head_pos(reader);
+        buffer->base = (char *)msg_reader_head_pos(reader);
         avail = hsize;
     }
     else
     {
-        buffer->base = (char *)record_reader_body_pos(reader);
-        avail = record_reader_avail_body_size(reader);
+        buffer->base = (char *)msg_reader_body_pos(reader);
+        avail = msg_reader_avail_body_size(reader);
     }
 
     buffer->len = avail < sz ? avail : sz;
@@ -179,26 +179,26 @@ static void read_wrap(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
             buv_error("read error", (int)nread);
             (*uv->watcher->on_recv_failure)(uv->watcher);
         }
-        sc_record_free(uv->record);
-        uv->record = 0;
+        sc_msg_free(uv->msg);
+        uv->msg = 0;
     }
     else if (nread > 0)
     {
-        struct record_reader *reader = &uv->reader;
-        if (record_reader_avail_head_size(reader) > 0)
+        struct msg_reader *reader = &uv->reader;
+        if (msg_reader_avail_head_size(reader) > 0)
         {
-            nread = (unsigned)record_reader_parse_head(reader, (unsigned)nread);
+            nread = (unsigned)msg_reader_parse_head(reader, (unsigned)nread);
         }
         else
         {
-            nread = (unsigned)record_reader_parse_body(reader, (unsigned)nread);
+            nread = (unsigned)msg_reader_parse_body(reader, (unsigned)nread);
         }
 
-        if (record_reader_finished(reader))
+        if (msg_reader_finished(reader))
         {
-            (*uv->watcher->on_recv_success)(uv->watcher, uv->record);
-            sc_record_free(uv->record);
-            uv->record = 0;
+            (*uv->watcher->on_recv_success)(uv->watcher, uv->msg);
+            sc_msg_free(uv->msg);
+            uv->msg = 0;
         }
     }
 }
@@ -342,14 +342,14 @@ static void write_wrap(struct uv_write_s *request, int status)
     (*uv->watcher->on_send_success)(uv->watcher);
 }
 
-static int buv_send(void *socket, struct sc_record const *record)
+static int buv_send(void *socket, struct sc_msg const *msg)
 {
     struct socket_uv *uv = socket;
 
-    uv->write_buffers[0].len = SC_RECORD_SIZE_BYTES;
-    uv->write_buffers[0].base = (char *)&record->size_be;
-    uv->write_buffers[1].len = sc_record_size(record);
-    uv->write_buffers[1].base = (char *)record->data;
+    uv->write_buffers[0].len = SC_MSG_SIZE_BYTES;
+    uv->write_buffers[0].base = (char *)&msg->size_be;
+    uv->write_buffers[1].len = sc_msg_get_size(msg);
+    uv->write_buffers[1].base = (char *)msg->data;
 
     struct uv_stream_s *stream = (struct uv_stream_s *)&uv->stream;
     struct uv_write_s *request = &uv->write_request;

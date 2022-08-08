@@ -56,11 +56,11 @@ static void close_socket(struct sc_socket *socket)
     if (sc_socket_close(socket)) fatal("sc_socket_close");
 }
 
-static void print_record(struct sc_record const *record)
+static void print_msg(struct sc_msg const *msg)
 {
-    char const *msg = (char const *)record->data;
-    unsigned size = sc_record_size(record);
-    outf("[%u](%.*s)\n", size, (int)size, msg);
+    char const *str = (char const *)msg->data;
+    unsigned size = sc_msg_get_size(msg);
+    outf("[%u](%.*s)\n", size, (int)size, str);
 }
 
 static void server_on_connection_success(struct sc_watcher *w)
@@ -73,10 +73,10 @@ static void server_on_connection_success(struct sc_watcher *w)
 }
 
 static void server_on_recv_success(struct sc_watcher *w,
-                                   struct sc_record *record)
+                                   struct sc_msg *msg)
 {
     (void)w;
-    print_record(record);
+    print_msg(msg);
 }
 
 static void server_on_close(struct sc_watcher *w)
@@ -95,9 +95,9 @@ static void client_on_accept_success(struct sc_watcher *w)
 }
 
 static void client_on_recv_success(struct sc_watcher *w,
-                                   struct sc_record *record)
+                                   struct sc_msg *msg)
 {
-    print_record(record);
+    print_msg(msg);
     struct client *client = w->data;
     struct server *server = client->server;
     if (server->terminate) close_socket(client->socket);

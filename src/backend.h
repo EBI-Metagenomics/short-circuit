@@ -1,7 +1,7 @@
 #ifndef BACKEND_H
 #define BACKEND_H
 
-struct sc_record;
+struct sc_msg;
 struct sc_watcher;
 struct uri;
 
@@ -15,7 +15,7 @@ typedef int accept_fn_t(void *server, void *client);
 typedef int bind_fn_t(void *, struct uri const *);
 typedef int listen_fn_t(void *, int backlog);
 
-typedef int send_fn_t(void *, struct sc_record const *);
+typedef int send_fn_t(void *, struct sc_msg const *);
 
 typedef int close_fn_t(void *);
 

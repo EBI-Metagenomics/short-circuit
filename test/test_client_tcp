@@ -9,7 +9,7 @@ IP4=127.0.0.1
 PORT=60722
 
 MESSAGES_FILE=$TMPDIR/messages.txt
-RECV_RECORDS_FILE=$TMPDIR/received.records
+RECV_MSGS_FILE=$TMPDIR/received.msgs
 ACTUAL_FILE=$TMPDIR/actual.txt
 DESIRED_FILE=$TMPDIR/desired.txt
 
@@ -30,7 +30,7 @@ cat >"$DESIRED_FILE" <<-EOM
 )
 EOM
 
-recvrec --ip4 "$IP4" --port "$PORT" >"$RECV_RECORDS_FILE" &
+recvrec --ip4 "$IP4" --port "$PORT" >"$RECV_MSGS_FILE" &
 RECVREC_PID=$!
 waitport listen "$PORT"
 
@@ -48,6 +48,6 @@ termproc $CLIENT_PID
 waitport unlisten "$PORT"
 termproc $RECVREC_PID
 
-disrec "$RECV_RECORDS_FILE" >"$ACTUAL_FILE"
+disrec "$RECV_MSGS_FILE" >"$ACTUAL_FILE"
 
 diff "$DESIRED_FILE" "$ACTUAL_FILE"

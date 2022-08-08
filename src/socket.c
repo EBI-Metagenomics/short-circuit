@@ -56,9 +56,9 @@ int sc_socket_listen(struct sc_socket *socket, int backlog)
     return backend->listen(socket->data, backlog);
 }
 
-int sc_socket_send(struct sc_socket *socket, struct sc_record const *record)
+int sc_socket_send(struct sc_socket *socket, struct sc_msg const *msg)
 {
-    return backend->send(socket->data, record);
+    return backend->send(socket->data, msg);
 }
 
 int sc_socket_close(struct sc_socket *socket)

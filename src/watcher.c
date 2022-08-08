@@ -35,10 +35,10 @@ static void on_accept_failure_noop(struct sc_watcher *watcher)
 }
 
 static void on_recv_success_noop(struct sc_watcher *watcher,
-                                 struct sc_record *record)
+                                 struct sc_msg *msg)
 {
     (void)watcher;
-    (void)record;
+    (void)msg;
     warn("on_recv_success_noop");
 }
 static void on_recv_failure_noop(struct sc_watcher *watcher)
