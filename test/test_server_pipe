@@ -30,9 +30,7 @@ termproc $SERVER_PID
 waitsock disappear "$SOCKET_FILE"
 
 cat >"$DESIRED_FILE" <<-EOM
-parse_args
 server_new
-server_uv_init
 server_init
 async_init
 signal_init

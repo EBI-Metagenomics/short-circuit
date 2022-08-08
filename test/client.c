@@ -30,21 +30,19 @@ struct client
 
 static char const *uri = 0;
 static FILE *input = 0;
-static FILE *output = 0;
 
 static void out(char const *msg)
 {
-    fputs(msg, output);
-    fputc('\n', output);
-    fflush(output);
+    puts(msg);
+    fflush(stdout);
 }
 
 static void outf(char const *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    vfprintf(output, fmt, args);
-    fflush(output);
+    vfprintf(stdout, fmt, args);
+    fflush(stdout);
     va_end(args);
 }
 
@@ -57,7 +55,8 @@ static void close_socket(struct sc_socket *socket)
 static void print_record(struct sc_record const *record)
 {
     char const *msg = (char const *)record->data;
-    outf("[%u](%.*s)\n", record->size, record->size, msg);
+    unsigned size = sc_record_size(record);
+    outf("[%u](%.*s)\n", size, (int)size, msg);
 }
 
 static void async_cb(struct uv_async_s *handle)
@@ -81,8 +80,15 @@ static void signal_cb(struct uv_signal_s *handle, int signum)
 static void record_setup(struct sc_record *record, char const *msg)
 {
     unsigned size = strlen(msg);
-    record->size = size;
+    sc_record_set_size(record, size);
     memcpy(record->data, msg, size);
+}
+
+static void remove_newline(char *str)
+{
+    while (*str && *str != '\n')
+        ++str;
+    if (*str) *str = 0;
 }
 
 static void idle_cb(struct uv_idle_s *handle)
@@ -100,6 +106,7 @@ static void idle_cb(struct uv_idle_s *handle)
         char *str = (char *)client->record->data;
         if (fgets(str, RECORD_MAX_SIZE, input))
         {
+            remove_newline(str);
             record_setup(client->record, str);
             if (sc_socket_send(client->socket, client->record))
                 fatal("sc_socket_send");
@@ -251,16 +258,15 @@ static void client_del(struct client *client)
 
 static void usage(void)
 {
-    puts("Usage: client URI INPUT_FILE OUTPUT_FILE");
+    puts("Usage: client URI INPUT_FILE");
     exit(1);
 }
 
 static void parse_args(int argc, char **argv)
 {
-    if (argc != 4) usage();
+    if (argc != 3) usage();
     uri = argv[1];
     if (!(input = fopen(argv[2], "r"))) fatal("failed to open input");
-    if (!(output = fopen(argv[3], "w"))) fatal("failed to create output");
     out(__FUNCTION__);
 }
 
@@ -286,7 +292,6 @@ int main(int argc, char **argv)
     if (uv_loop_close(client->uv.loop)) fatal("uv_loop_close");
 
     client_del(client);
-    fclose(output);
     fclose(input);
 
     return 0;

@@ -67,7 +67,8 @@ static void close_socket(struct sc_socket *socket)
 static void print_record(struct sc_record const *record)
 {
     char const *msg = (char const *)record->data;
-    outf("[%u](%.*s)\n", record->size, record->size, msg);
+    unsigned size = sc_record_size(record);
+    outf("[%u](%.*s)\n", size, (int)size, msg);
 }
 
 static void server_on_connection_success(struct sc_watcher *w)
@@ -146,7 +147,6 @@ static void parse_args(int argc, char **argv)
     if (argc != 3) fatal("wrong number of arguments");
     uri = argv[1];
     if (!(output = fopen(argv[2], "w"))) fatal("failed to create output");
-    out(__FUNCTION__);
 }
 
 static void async_cb(struct uv_async_s *handle)

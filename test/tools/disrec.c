@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     {
         uint32_t size = 0;
         if (fread(&size, sizeof(size), 1, fp) != 1) break;
-        size = musl_htonl(size);
+        size = musl_ntohl(size);
         if (fread(msg, 1, size, fp) != size) fatal("fread");
         printf("[%u] (%.*s)\n", size, (int)size, msg);
     }

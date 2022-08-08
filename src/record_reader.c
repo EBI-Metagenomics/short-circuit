@@ -34,8 +34,6 @@ static unsigned parse_head(struct record_reader *reader, unsigned size)
     size = (unsigned)(size - skip);
     avail = record_reader_avail_head_size(reader);
 
-    if (avail == 0) reader->record->size = ctb_ntohl(reader->record->size);
-
     return size;
 }
 
@@ -66,9 +64,10 @@ unsigned record_reader_avail_head_size(struct record_reader const *reader)
 
 unsigned record_reader_avail_body_size(struct record_reader const *reader)
 {
-    if (record_reader_avail_head_size(reader) > 0) return reader->record->size;
+    if (record_reader_avail_head_size(reader) > 0)
+        return sc_record_size(reader->record);
     unsigned used = used_size(reader);
-    return reader->record->size - (used - SC_RECORD_SIZE_BYTES);
+    return sc_record_size(reader->record) - (used - SC_RECORD_SIZE_BYTES);
 }
 
 bool record_reader_finished(struct record_reader const *reader)

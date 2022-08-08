@@ -1,0 +1,32 @@
+#!/bin/bash
+
+function help {
+    echo "Usage: waitproc <PID> <TIMEOUT>"
+    exit 1
+}
+
+[ $# -ne 2 ] && help
+
+PID=$1
+TIMEOUT=$2
+
+function proc_exist {
+    kill -0 "$PID" 2>/dev/null && return 0
+    return 1
+}
+
+START_TIME=$(date +%s)
+
+while true; do
+    if ! proc_exist; then
+        exit 0
+    fi
+    CURR_TIME=$(date +%s)
+    DIFF=$((CURR_TIME - START_TIME))
+    if [ "$DIFF" -ge "$TIMEOUT" ]; then
+        break
+    fi
+    sleep 0.1
+done
+
+exit 1

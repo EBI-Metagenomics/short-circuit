@@ -332,7 +332,7 @@ static int buv_send(void *socket, struct sc_record const *record)
 {
     struct socket_uv *uv = socket;
 
-    unsigned size = SC_RECORD_SIZE_BYTES + record->size;
+    unsigned size = SC_RECORD_SIZE_BYTES + sc_record_size(record);
     uv->write_buffer = uv_buf_init((char *)record, size);
     struct uv_stream_s *stream = (struct uv_stream_s *)&uv->stream;
     struct uv_write_s *request = &uv->write_request;
