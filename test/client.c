@@ -6,6 +6,11 @@
 #include <unistd.h>
 #include <uv.h>
 
+enum
+{
+    RECORD_MAX_SIZE = 1024,
+};
+
 struct client
 {
     struct backend_uv_data uv;
@@ -99,7 +104,7 @@ static void idle_cb(struct uv_idle_s *handle)
     if (!client->input_eof && client->ready_send)
     {
         char *str = (char *)client->record->data;
-        if (fgets(str, client->record->size, input))
+        if (fgets(str, RECORD_MAX_SIZE, input))
         {
             record_setup(client->record, str);
             if (sc_socket_send(client->socket, client->record))
@@ -114,6 +119,8 @@ static void idle_cb(struct uv_idle_s *handle)
             else
             {
                 if (!(client->input_eof = feof(input))) fatal("input error");
+                client->terminate = true;
+                if (uv_async_send(&client->async)) fatal("uv_async_send error");
             }
         }
     }
@@ -212,7 +219,7 @@ static struct client *client_new(struct uv_loop_s *loop)
     out(__FUNCTION__);
     struct client *client = malloc(sizeof(*client));
     if (!client) fatal("not enough memory");
-    client->record = alloc_record(1024);
+    client->record = alloc_record(RECORD_MAX_SIZE);
     if (!client->record) fatal("not enough memory");
     client->uv.loop = loop;
     return client;
