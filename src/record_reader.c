@@ -6,68 +6,50 @@
 void record_reader_init(struct record_reader *reader, struct sc_record *record)
 {
     reader->record = record;
-    reader->pos = (unsigned char *)record;
+    reader->head_pos = (unsigned char *)&record->size_be;
+    reader->body_pos = (unsigned char *)record->data;
 }
 
-unsigned char *record_reader_pos(struct record_reader *reader)
+static unsigned skip_pos(unsigned char **pos, unsigned avail, unsigned size)
 {
-    return reader->pos;
+    unsigned skip = avail < size ? avail : size;
+    *pos += skip;
+    return (unsigned)(size - skip);
 }
 
-static unsigned parse_head(struct record_reader *reader, unsigned size);
-static unsigned parse_body(struct record_reader *reader, unsigned size);
-
-unsigned record_reader_parse(struct record_reader *reader, unsigned size)
-{
-    size = parse_head(reader, size);
-    return parse_body(reader, size);
-}
-
-static unsigned parse_head(struct record_reader *reader, unsigned size)
+unsigned record_reader_parse_head(struct record_reader *reader, unsigned size)
 {
     unsigned avail = record_reader_avail_head_size(reader);
-
-    if (avail == 0) return size;
-
-    unsigned skip = avail < size ? avail : size;
-    reader->pos += skip;
-    size = (unsigned)(size - skip);
-    avail = record_reader_avail_head_size(reader);
-
-    return size;
+    return skip_pos(&reader->head_pos, avail, size);
 }
 
-static unsigned parse_body(struct record_reader *reader, unsigned size)
+unsigned record_reader_parse_body(struct record_reader *reader, unsigned size)
 {
-    if (record_reader_avail_head_size(reader) > 0) return size;
-
     unsigned avail = record_reader_avail_body_size(reader);
-
-    unsigned skip = avail < size ? avail : size;
-    reader->pos += skip;
-    size = (unsigned)(size - skip);
-
-    return size;
+    return skip_pos(&reader->body_pos, avail, size);
 }
 
-static unsigned used_size(struct record_reader const *reader)
+unsigned char *record_reader_head_pos(struct record_reader *reader)
 {
-    return (unsigned)(reader->pos - (unsigned char *)reader->record);
+    return reader->head_pos;
+}
+
+unsigned char *record_reader_body_pos(struct record_reader *reader)
+{
+    return reader->body_pos;
 }
 
 unsigned record_reader_avail_head_size(struct record_reader const *reader)
 {
-    unsigned used = used_size(reader);
-    return used < SC_RECORD_SIZE_BYTES ? (unsigned)(SC_RECORD_SIZE_BYTES - used)
-                                       : 0;
+    unsigned char const *start = (unsigned char *)&reader->record->size_be;
+    unsigned used = (unsigned)(reader->head_pos - start);
+    return (unsigned)(SC_RECORD_SIZE_BYTES - used);
 }
 
 unsigned record_reader_avail_body_size(struct record_reader const *reader)
 {
-    if (record_reader_avail_head_size(reader) > 0)
-        return sc_record_size(reader->record);
-    unsigned used = used_size(reader);
-    return sc_record_size(reader->record) - (used - SC_RECORD_SIZE_BYTES);
+    unsigned used = (unsigned)(reader->body_pos - reader->record->data);
+    return (unsigned)(sc_record_size(reader->record) - used);
 }
 
 bool record_reader_finished(struct record_reader const *reader)

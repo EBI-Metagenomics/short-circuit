@@ -133,12 +133,15 @@ static void client_on_close(struct sc_watcher *w)
 static struct sc_record *alloc_record(uint32_t size)
 {
     out(__FUNCTION__);
-    return malloc(sizeof(struct sc_record) + size);
+    struct sc_record *record = malloc(sizeof(struct sc_record));
+    record->data = malloc(size);
+    return record;
 }
 
 static void free_record(struct sc_record *record)
 {
     out(__FUNCTION__);
+    free(record->data);
     free(record);
 }
 

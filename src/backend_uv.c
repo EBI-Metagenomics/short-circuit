@@ -23,7 +23,7 @@ struct socket_uv
     union stream stream;
     struct uv_connect_s connect_request;
     struct uv_write_s write_request;
-    uv_buf_t write_buffer;
+    uv_buf_t write_buffers[2];
     struct sc_record *record;
     struct record_reader reader;
     enum proto proto;
@@ -64,9 +64,9 @@ static void buv_init(void *socket, struct sc_watcher *watcher)
     uv->connect_request.data = uv;
 
     uv->write_request.data = uv;
-    uv->write_buffer = uv_buf_init(0, 0);
+    uv->write_buffers[0] = uv_buf_init(0, 0);
+    uv->write_buffers[1] = uv_buf_init(0, 0);
     uv->record = 0;
-    record_reader_init(&uv->reader, uv->record);
     uv->proto = PROTO_NOSET;
     ctb_bzero(&uv->tcp_addr, sizeof(uv->tcp_addr));
 }
@@ -150,10 +150,18 @@ static void alloc_wrap(uv_handle_t *handle, size_t suggested_size,
         record_reader_init(&uv->reader, uv->record);
     }
 
-    buffer->base = (char *)record_reader_pos(reader);
-
     unsigned hsize = record_reader_avail_head_size(reader);
-    unsigned avail = hsize > 0 ? hsize : record_reader_avail_body_size(reader);
+    unsigned avail = 0;
+    if (hsize > 0)
+    {
+        buffer->base = (char *)record_reader_head_pos(reader);
+        avail = hsize;
+    }
+    else
+    {
+        buffer->base = (char *)record_reader_body_pos(reader);
+        avail = record_reader_avail_body_size(reader);
+    }
 
     buffer->len = avail < sz ? avail : sz;
 }
@@ -177,8 +185,14 @@ static void read_wrap(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
     else if (nread > 0)
     {
         struct record_reader *reader = &uv->reader;
-        nread = (unsigned)record_reader_parse(reader, (unsigned)nread);
-        assert(nread == 0);
+        if (record_reader_avail_head_size(reader) > 0)
+        {
+            nread = (unsigned)record_reader_parse_head(reader, (unsigned)nread);
+        }
+        else
+        {
+            nread = (unsigned)record_reader_parse_body(reader, (unsigned)nread);
+        }
 
         if (record_reader_finished(reader))
         {
@@ -332,11 +346,14 @@ static int buv_send(void *socket, struct sc_record const *record)
 {
     struct socket_uv *uv = socket;
 
-    unsigned size = SC_RECORD_SIZE_BYTES + sc_record_size(record);
-    uv->write_buffer = uv_buf_init((char *)record, size);
+    uv->write_buffers[0].len = SC_RECORD_SIZE_BYTES;
+    uv->write_buffers[0].base = (char *)&record->size_be;
+    uv->write_buffers[1].len = sc_record_size(record);
+    uv->write_buffers[1].base = (char *)record->data;
+
     struct uv_stream_s *stream = (struct uv_stream_s *)&uv->stream;
     struct uv_write_s *request = &uv->write_request;
-    int r = uv_write(request, stream, &uv->write_buffer, 1, &write_wrap);
+    int r = uv_write(request, stream, uv->write_buffers, 2, &write_wrap);
     if (r)
     {
         buv_error("send error", r);

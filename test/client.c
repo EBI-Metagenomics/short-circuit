@@ -162,10 +162,16 @@ static void on_close(struct sc_watcher *w)
 
 static struct sc_record *alloc_record(uint32_t size)
 {
-    return malloc(sizeof(struct sc_record) + size);
+    struct sc_record *record = malloc(sizeof(struct sc_record));
+    record->data = malloc(size);
+    return record;
 }
 
-static void free_record(struct sc_record *record) { free(record); }
+static void free_record(struct sc_record *record)
+{
+    free(record->data);
+    free(record);
+}
 
 static struct client *client_new(struct uv_loop_s *loop)
 {
