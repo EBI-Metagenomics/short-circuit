@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <uv.h>
 
@@ -164,10 +165,7 @@ static struct sc_record *alloc_record(uint32_t size)
     return malloc(sizeof(struct sc_record) + size);
 }
 
-static void free_record(struct sc_record *record)
-{
-    free(record);
-}
+static void free_record(struct sc_record *record) { free(record); }
 
 static struct client *client_new(struct uv_loop_s *loop)
 {
