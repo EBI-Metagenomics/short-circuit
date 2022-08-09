@@ -15,7 +15,7 @@ enum
 
 struct client
 {
-    struct backend_uv_data uv;
+    struct sc_backend_uv_data uv;
     struct uv_async_s async;
     struct uv_signal_s sigterm;
     struct uv_signal_s sigint;

@@ -41,12 +41,12 @@ static int buv_send(void *socket, struct sc_msg const *);
 static int buv_close(void *socket);
 static void buv_error(char const *msg, int status);
 
-static struct backend_uv_data *buv_data = 0;
+static struct sc_backend_uv_data *buv_data = 0;
 static struct backend buv_funcs = {buv_alloc,   buv_init,   buv_free,
                                    buv_connect, buv_accept, buv_bind,
                                    buv_listen,  buv_send,   buv_close};
 
-struct backend const *backend_uv_init(struct backend_uv_data *data)
+struct backend const *backend_uv_init(struct sc_backend_uv_data *data)
 {
     buv_data = data;
     return &buv_funcs;

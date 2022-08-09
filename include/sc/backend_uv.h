@@ -3,7 +3,7 @@
 
 struct uv_loop_s;
 
-struct backend_uv_data
+struct sc_backend_uv_data
 {
     struct uv_loop_s *loop;
 };

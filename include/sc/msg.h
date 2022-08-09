@@ -1,6 +1,7 @@
 #ifndef SC_MSG_H
 #define SC_MSG_H
 
+#include "ctb/ctb.h"
 #include <assert.h>
 #include <stdint.h>
 
@@ -11,6 +12,9 @@ struct sc_msg
     uint32_t size_be;
     unsigned char *data;
 };
+
+#define SC_MSG_INIT(sz, x)                                                     \
+    (struct sc_msg) { .size_be = CTB_HTONL(sz), .data = (unsigned char *)(x) }
 
 typedef struct sc_msg *(sc_msg_alloc_fn_t)(unsigned size);
 typedef void sc_msg_free_fn_t(struct sc_msg *);

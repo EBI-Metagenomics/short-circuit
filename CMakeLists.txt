@@ -13,7 +13,7 @@ include(cmake/compiler-options.cmake)
 include(cmake/sanitizers.cmake)
 include(cmake/CPM.cmake)
 
-cpmaddpackage(NAME c_toolbelt VERSION 0.7.2 GITHUB_REPOSITORY horta/c-toolbelt)
+cpmaddpackage(NAME c_toolbelt VERSION 0.9.0 GITHUB_REPOSITORY horta/c-toolbelt)
 cpmaddpackage(
   NAME cco VERSION 0.0.9 GITHUB_REPOSITORY
   EBI-Metagenomics/c-containers
