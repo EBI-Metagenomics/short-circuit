@@ -30,6 +30,7 @@ void sc_socket_del(struct sc_socket *socket)
 {
     if (socket->uri) uri_del(socket->uri);
     backend->free(socket->data);
+    free(socket);
 }
 
 int sc_socket_connect(struct sc_socket *socket, char const *uri)

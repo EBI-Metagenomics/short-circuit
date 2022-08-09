@@ -25,5 +25,7 @@ int main(void)
 
     uv_run(uv.loop, UV_RUN_DEFAULT);
 
+    sc_socket_del(socket);
+
     return 0;
 }
