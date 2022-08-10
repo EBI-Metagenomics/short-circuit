@@ -24,7 +24,9 @@ target_link_libraries(send_hello PRIVATE SC::sc)
 target_link_libraries(sc PRIVATE uv_a)
 target_compile_features(send_hello PRIVATE c_std_11)
 target_compile_options(send_hello PRIVATE ${WARNING_FLAGS})
-add_test(NAME send_hello COMMAND send_hello)
+
+file(COPY test_send_hello DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME send_hello COMMAND test_send_hello)
 
 add_executable(echo_server echo_server.c)
 target_link_libraries(echo_server PRIVATE SC::sc)

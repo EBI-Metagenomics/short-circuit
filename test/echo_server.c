@@ -14,6 +14,7 @@ static void close_socket(struct sc_socket *socket)
 static void echo(struct sc_msg const *msg)
 {
     printf("%.*s\n", (int)sc_msg_get_size(msg), (char const *)msg->data);
+    fflush(stdout);
 }
 
 static void on_connection(struct sc_socket *server, int errcode)

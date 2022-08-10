@@ -14,10 +14,6 @@ include(cmake/sanitizers.cmake)
 include(cmake/CPM.cmake)
 
 cpmaddpackage(NAME c_toolbelt VERSION 0.9.0 GITHUB_REPOSITORY horta/c-toolbelt)
-cpmaddpackage(
-  NAME cco VERSION 0.0.9 GITHUB_REPOSITORY
-  EBI-Metagenomics/c-containers
-)
 cpmaddpackage(NAME libuv VERSION 1.44.2 GITHUB_REPOSITORY libuv/libuv)
 
 add_library(
@@ -36,7 +32,6 @@ add_library(SC::sc ALIAS sc)
 
 target_link_libraries(sc PUBLIC uv_a)
 target_link_libraries(sc PUBLIC C_TOOLBELT::ctb)
-target_link_libraries(sc PUBLIC CCO::cco)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   include(CheckIPOSupported)
