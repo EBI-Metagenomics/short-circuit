@@ -2,8 +2,6 @@
 #define SC_MSG_H
 
 #include "ctb/ctb.h"
-#include <assert.h>
-#include <stdint.h>
 
 #define SC_MSG_SIZE_BYTES 4
 

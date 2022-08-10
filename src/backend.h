@@ -2,11 +2,11 @@
 #define BACKEND_H
 
 struct sc_msg;
-struct sc_watcher;
+struct watcher;
 struct uri;
 
 typedef void *(alloc_fn_t)(void);
-typedef void init_fn_t(void *, struct sc_watcher *);
+typedef void init_fn_t(void *, struct watcher *);
 typedef void free_fn_t(void *);
 
 typedef int connect_fn_t(void *, struct uri const *);
@@ -18,6 +18,8 @@ typedef int listen_fn_t(void *, int backlog);
 typedef int send_fn_t(void *, struct sc_msg const *);
 
 typedef int close_fn_t(void *);
+
+typedef char const *strerror_fn_t(int errcode);
 
 struct backend
 {
@@ -34,6 +36,8 @@ struct backend
     send_fn_t *send;
 
     close_fn_t *close;
+
+    strerror_fn_t *strerror;
 };
 
 extern struct backend const *backend;

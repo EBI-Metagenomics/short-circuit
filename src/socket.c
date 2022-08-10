@@ -10,7 +10,7 @@ struct sc_socket
     void *userdata;
     void *backend;
     struct uri *uri;
-    struct sc_watcher watcher;
+    struct watcher watcher;
 };
 
 struct sc_socket *sc_socket_new(void)
@@ -33,15 +33,15 @@ struct sc_socket *sc_socket_new(void)
 
 void sc_socket_del(struct sc_socket *socket)
 {
-    if (socket->uri) uri_del(socket->uri);
+    if (socket->uri) sc_uri_del(socket->uri);
     backend->free(socket->backend);
     free(socket);
 }
 
 int sc_socket_connect(struct sc_socket *socket, char const *uri)
 {
-    assert(!socket->uri);
-    if (!(socket->uri = uri_new(uri))) return 1;
+    int errcode = 0;
+    if (!(socket->uri = sc_uri_new(uri, &errcode))) return errcode;
     return backend->connect(socket->backend, socket->uri);
 }
 
@@ -52,8 +52,8 @@ void sc_socket_accept(struct sc_socket *server, struct sc_socket *client)
 
 int sc_socket_bind(struct sc_socket *socket, char const *uri)
 {
-    assert(!socket->uri);
-    if (!(socket->uri = uri_new(uri))) return 1;
+    int errcode = 0;
+    if (!(socket->uri = sc_uri_new(uri, &errcode))) return errcode;
     return backend->bind(socket->backend, socket->uri);
 }
 
@@ -69,13 +69,13 @@ int sc_socket_send(struct sc_socket *socket, struct sc_msg const *msg)
 
 int sc_socket_close(struct sc_socket *socket)
 {
-    int rc = backend->close(socket->backend);
+    int errcode = backend->close(socket->backend);
     if (socket->uri)
     {
-        uri_del(socket->uri);
+        sc_uri_del(socket->uri);
         socket->uri = 0;
     }
-    return rc;
+    return errcode;
 }
 
 void sc_socket_set_userdata(struct sc_socket *socket, void *userdata)

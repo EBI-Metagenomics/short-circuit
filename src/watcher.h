@@ -5,7 +5,7 @@
 
 struct sc_socket;
 
-struct sc_watcher
+struct watcher
 {
     struct sc_socket *socket;
 
@@ -17,6 +17,6 @@ struct sc_watcher
     sc_on_close_fn_t *on_close;
 };
 
-void sc_watcher_init(struct sc_watcher *, struct sc_socket *);
+void sc_watcher_init(struct watcher *, struct sc_socket *);
 
 #endif

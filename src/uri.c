@@ -1,5 +1,6 @@
 #include "uri.h"
 #include "ctb/ctb.h"
+#include "sc/errcode.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -31,17 +32,24 @@ struct uri
 static bool check_ip4(char const *src);
 static bool check_port(char const *port);
 
-struct uri *uri_new(char const *instr)
+struct uri *sc_uri_new(char const *instr, int *errcode)
 {
+    *errcode = SC_EURIPARSE;
     struct uri *uri = malloc(sizeof(*uri));
-    if (!uri) return 0;
+    if (!uri)
+    {
+        *errcode = SC_ENOMEM;
+        return 0;
+    }
 
     uri->str = ctb_strdup(instr);
     if (!uri->str)
     {
+        *errcode = SC_ENOMEM;
         free(uri);
         return 0;
     }
+
     size_t urimax = strlen(uri->str) + 1;
     char *path = 0;
     char *scheme = ctb_strtok_s(uri->str, &urimax, ":", &path);
@@ -54,17 +62,22 @@ struct uri *uri_new(char const *instr)
     if (!scheme_ntok) goto cleanup;
 
     uri->scheme.proto = ctb_strtok_s(0, &schememax, "+", &scheme_ntok);
-    if (!uri->scheme.proto ||
-        (strcmp(uri->scheme.proto, "pipe") && strcmp(uri->scheme.proto, "tcp")))
+    if (!uri->scheme.proto) goto cleanup;
+    if ((strcmp(uri->scheme.proto, "pipe") && strcmp(uri->scheme.proto, "tcp")))
+    {
+        *errcode = SC_EINVPROTO;
         goto cleanup;
+    }
 
     if (strlen(path) <= 2) goto cleanup;
     if (*(path++) != '/') goto cleanup;
     if (*(path++) != '/') goto cleanup;
 
     if (!strcmp(uri->scheme.proto, "pipe"))
+    {
         uri->pipe.filepath = path;
-    else if (!strcmp(uri->scheme.proto, "tcp"))
+    }
+    else
     {
         size_t pathmax = strlen(path) + 1;
         uri->tcp.port = 0;
@@ -72,8 +85,6 @@ struct uri *uri_new(char const *instr)
         if (!check_ip4(uri->tcp.ip4)) goto cleanup;
         if (!uri->tcp.port || !check_port(uri->tcp.port)) goto cleanup;
     }
-    else
-        goto cleanup;
 
     return uri;
 
@@ -83,27 +94,27 @@ cleanup:
     return 0;
 }
 
-void uri_del(struct uri const *uri)
+void sc_uri_del(struct uri const *uri)
 {
     free(uri->str);
     free((void *)uri);
 }
 
-enum proto uri_scheme_protocol(struct uri const *uri)
+enum proto sc_uri_scheme_protocol(struct uri const *uri)
 {
     if (!strcmp(uri->scheme.proto, "pipe")) return PROTO_PIPE;
     if (!strcmp(uri->scheme.proto, "tcp")) return PROTO_TCP;
     assert(0);
 }
 
-char const *uri_pipe_filepath(struct uri const *uri)
+char const *sc_uri_pipe_filepath(struct uri const *uri)
 {
     return uri->pipe.filepath;
 }
 
-char const *uri_tcp_ip4(struct uri const *uri) { return uri->tcp.ip4; }
+char const *sc_uri_tcp_ip4(struct uri const *uri) { return uri->tcp.ip4; }
 
-unsigned uri_tcp_port(struct uri const *uri)
+unsigned sc_uri_tcp_port(struct uri const *uri)
 {
     return (unsigned)strtol(uri->tcp.port, 0, 10);
 }

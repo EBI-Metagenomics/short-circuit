@@ -33,13 +33,13 @@ unsigned sc_msg_get_size(struct sc_msg const *msg)
     return ctb_ntohl(msg->size_be);
 }
 
-void msg_init(struct sc_msg *msg)
+void sc_msg_init(struct sc_msg *msg)
 {
     msg->size_be = 0;
     msg->data[0] = 0;
 }
 
-void msg_init_allocator(sc_msg_alloc_fn_t *rec_alloc,
+void sc_msg_init_allocator(sc_msg_alloc_fn_t *rec_alloc,
                            sc_msg_free_fn_t *rec_free)
 {
     if (rec_alloc) msg_alloc = rec_alloc;

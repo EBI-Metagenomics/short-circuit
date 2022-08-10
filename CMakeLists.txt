@@ -24,7 +24,6 @@ add_library(
   sc
   src/backend.c
   src/backend_uv.c
-  src/die.c
   src/msg.c
   src/msg_reader.c
   src/sc.c

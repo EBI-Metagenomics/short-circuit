@@ -1,25 +1,27 @@
 #include "watcher.h"
 #include "warn.h"
 
+#define NOTSET_WARNING(CB) CB " callback called but not set"
+
 static void on_connect_noop(struct sc_socket *socket, int errcode)
 {
     (void)socket;
     (void)errcode;
-    warn("calling on_connect_noop");
+    sc_warn(NOTSET_WARNING("on_connect"));
 }
 
 static void on_connection_noop(struct sc_socket *socket, int errcode)
 {
     (void)socket;
     (void)errcode;
-    warn("on_connection_noop");
+    sc_warn(NOTSET_WARNING("on_connection"));
 }
 
 static void on_accept_noop(struct sc_socket *socket, int errcode)
 {
     (void)socket;
     (void)errcode;
-    warn("on_accept_noop");
+    sc_warn(NOTSET_WARNING("on_accept"));
 }
 
 static void on_recv_noop(struct sc_socket *socket, struct sc_msg *msg,
@@ -28,23 +30,23 @@ static void on_recv_noop(struct sc_socket *socket, struct sc_msg *msg,
     (void)socket;
     (void)msg;
     (void)errcode;
-    warn("on_recv_noop");
+    sc_warn(NOTSET_WARNING("on_recv"));
 }
 
 static void on_send_noop(struct sc_socket *socket, int errcode)
 {
     (void)socket;
     (void)errcode;
-    warn("on_send_noop");
+    sc_warn(NOTSET_WARNING("on_send"));
 }
 
 static void on_close_noop(struct sc_socket *socket)
 {
     (void)socket;
-    warn("on_close_noop");
+    sc_warn(NOTSET_WARNING("on_close"));
 }
 
-void sc_watcher_init(struct sc_watcher *watcher, struct sc_socket *socket)
+void sc_watcher_init(struct watcher *watcher, struct sc_socket *socket)
 {
     watcher->socket = socket;
     watcher->on_connect = &on_connect_noop;
