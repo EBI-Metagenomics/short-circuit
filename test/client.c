@@ -1,5 +1,6 @@
 #include "fatal.h"
 #include "sc/sc.h"
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
