@@ -23,7 +23,6 @@ struct client
 
     struct sc_msg *msg;
     struct sc_socket *socket;
-    struct sc_watcher watcher;
     bool terminate;
     bool input_eof;
     bool ready_send;
@@ -121,33 +120,33 @@ static void idle_init(struct client *client)
     client->idle.data = client;
 }
 
-static void on_connect_success(struct sc_watcher *w)
+static void on_connect(struct sc_socket *socket, int errcode)
 {
-    struct client *client = w->data;
+    if (errcode) fatal("errcode");
+    struct client *client = sc_socket_get_userdata(socket);
     client->ready_send = true;
 }
 
-static void on_connect_failure(struct sc_watcher *w)
+static void on_recv(struct sc_socket *socket, struct sc_msg *msg, int errcode)
 {
-    (void)w;
-    fatal("failed to connect");
+    if (errcode) fatal("errcode");
+    if (!msg)
+    {
+        struct client *client = sc_socket_get_userdata(socket);
+        close_socket(client->socket);
+    }
 }
 
-static void on_recv_eof(struct sc_watcher *w)
+static void on_send(struct sc_socket *socket, int errcode)
 {
-    struct client *client = w->data;
-    close_socket(client->socket);
-}
-
-static void on_send_success(struct sc_watcher *w)
-{
-    struct client *client = w->data;
+    if (errcode) fatal("errcode");
+    struct client *client = sc_socket_get_userdata(socket);
     client->ready_send = true;
 }
 
-static void on_close(struct sc_watcher *w)
+static void on_close(struct sc_socket *socket)
 {
-    struct client *client = w->data;
+    struct client *client = sc_socket_get_userdata(socket);
     uv_close((struct uv_handle_s *)&client->sigterm, 0);
     uv_close((struct uv_handle_s *)&client->sigint, 0);
 }
@@ -169,16 +168,13 @@ static void client_init(struct client *client)
     signal_init(client, &client->sigint, signal_cb, SIGINT);
     idle_init(client);
 
-    sc_watcher_init(&client->watcher);
-    client->watcher.data = client;
-    client->watcher.on_connect_success = &on_connect_success;
-    client->watcher.on_connect_failure = &on_connect_failure;
-    client->watcher.on_recv_eof = &on_recv_eof;
-    client->watcher.on_send_success = &on_send_success;
-    client->watcher.on_close = &on_close;
+    if (!(client->socket = sc_socket_new())) fatal("sc_socket_new");
 
-    if (!(client->socket = sc_socket_new(&client->watcher)))
-        fatal("sc_socket_new");
+    sc_socket_set_userdata(client->socket, client);
+    sc_socket_on_connect(client->socket, on_connect);
+    sc_socket_on_recv(client->socket, on_recv);
+    sc_socket_on_send(client->socket, on_send);
+    sc_socket_on_close(client->socket, on_close);
 
     client->terminate = false;
     client->input_eof = false;

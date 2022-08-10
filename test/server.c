@@ -13,7 +13,6 @@ struct client
 {
     struct server *server;
     struct sc_socket *socket;
-    struct sc_watcher watcher;
     bool active;
 };
 
@@ -33,7 +32,6 @@ struct server
     struct uv_idle_s idle;
 
     struct sc_socket *socket;
-    struct sc_watcher watcher;
 
     struct client client;
     enum terminate terminate;
@@ -63,55 +61,57 @@ static void print_msg(struct sc_msg const *msg)
     outf("[%u](%.*s)\n", size, (int)size, str);
 }
 
-static void server_on_connection_success(struct sc_watcher *w)
+static void server_on_connection(struct sc_socket *socket, int errcode)
 {
-    struct server *server = w->data;
+    if (errcode) fatal("errcode");
+    struct server *server = sc_socket_get_userdata(socket);
     if (server->terminate) return;
 
-    if (sc_socket_accept(server->socket, server->client.socket))
-        close_socket(server->client.socket);
+    sc_socket_accept(socket, server->client.socket);
 }
 
-static void server_on_recv_success(struct sc_watcher *w,
-                                   struct sc_msg *msg)
+static void server_on_recv(struct sc_socket *socket, struct sc_msg *msg,
+                           int errcode)
 {
-    (void)w;
+    (void)socket;
+    if (errcode) fatal("errcode");
     print_msg(msg);
 }
 
-static void server_on_close(struct sc_watcher *w)
+static void server_on_close(struct sc_socket *socket)
 {
-    struct server *server = w->data;
+    struct server *server = sc_socket_get_userdata(socket);
     uv_close((struct uv_handle_s *)&server->sigterm, 0);
     uv_close((struct uv_handle_s *)&server->sigint, 0);
 }
 
-static void client_on_accept_success(struct sc_watcher *w)
+static void client_on_accept(struct sc_socket *socket, int errcode)
 {
-    struct client *client = w->data;
+    if (errcode) fatal("errcode");
+    struct client *client = sc_socket_get_userdata(socket);
     struct server *server = client->server;
     client->active = true;
     if (server->terminate) close_socket(client->socket);
 }
 
-static void client_on_recv_success(struct sc_watcher *w,
-                                   struct sc_msg *msg)
+static void client_on_recv(struct sc_socket *socket, struct sc_msg *msg,
+                           int errcode)
 {
+    if (errcode) fatal("errcode");
+    struct client *client = sc_socket_get_userdata(socket);
+    if (!msg)
+    {
+        close_socket(client->socket);
+        return;
+    }
     print_msg(msg);
-    struct client *client = w->data;
     struct server *server = client->server;
     if (server->terminate) close_socket(client->socket);
 }
 
-static void client_on_recv_eof(struct sc_watcher *w)
+static void client_on_close(struct sc_socket *socket)
 {
-    struct client *client = w->data;
-    close_socket(client->socket);
-}
-
-static void client_on_close(struct sc_watcher *w)
-{
-    struct client *client = w->data;
+    struct client *client = sc_socket_get_userdata(socket);
     client->active = false;
 }
 
@@ -185,30 +185,24 @@ static void server_init(struct server *server)
     signal_init(server, &server->sigint, signal_cb, SIGINT);
     idle_init(server);
 
-    sc_watcher_init(&server->watcher);
-    server->watcher.data = server;
-    server->watcher.on_connection_success = &server_on_connection_success;
-    server->watcher.on_recv_success = &server_on_recv_success;
-    server->watcher.on_close = &server_on_close;
+    if (!(server->socket = sc_socket_new())) fatal("sc_socket_new");
 
-    if (!(server->socket = sc_socket_new(&server->watcher)))
-        fatal("sc_socket_new");
-
+    sc_socket_set_userdata(server->socket, server);
+    sc_socket_on_connection(server->socket, &server_on_connection);
+    sc_socket_on_recv(server->socket, &server_on_recv);
+    sc_socket_on_close(server->socket, &server_on_close);
     server->terminate = NOTSET;
 }
 
 static void client_init(struct client *client, struct server *server)
 {
     client->server = server;
-    sc_watcher_init(&client->watcher);
-    client->watcher.data = client;
-    client->watcher.on_accept_success = &client_on_accept_success;
-    client->watcher.on_recv_success = &client_on_recv_success;
-    client->watcher.on_recv_eof = &client_on_recv_eof;
-    client->watcher.on_close = &client_on_close;
+    if (!(client->socket = sc_socket_new())) fatal("sc_socket_new");
 
-    if (!(client->socket = sc_socket_new(&client->watcher)))
-        fatal("sc_socket_new");
+    sc_socket_set_userdata(client->socket, client);
+    sc_socket_on_accept(client->socket, &client_on_accept);
+    sc_socket_on_recv(client->socket, &client_on_recv);
+    sc_socket_on_close(client->socket, &client_on_close);
 
     client->active = false;
 }

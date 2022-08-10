@@ -10,7 +10,7 @@ typedef void init_fn_t(void *, struct sc_watcher *);
 typedef void free_fn_t(void *);
 
 typedef int connect_fn_t(void *, struct uri const *);
-typedef int accept_fn_t(void *server, void *client);
+typedef void accept_fn_t(void *server, void *client);
 
 typedef int bind_fn_t(void *, struct uri const *);
 typedef int listen_fn_t(void *, int backlog);

@@ -5,9 +5,9 @@
 #include "msg_reader.h"
 #include "proto.h"
 #include "sc/backend_uv.h"
-#include "sc/watcher.h"
 #include "uri.h"
 #include "warn.h"
+#include "watcher.h"
 #include <stdlib.h>
 #include <uv.h>
 
@@ -34,7 +34,7 @@ static void *buv_alloc(void);
 static void buv_init(void *, struct sc_watcher *);
 static void buv_free(void *);
 static int buv_connect(void *client, struct uri const *);
-static int buv_accept(void *server, void *client);
+static void buv_accept(void *server, void *client);
 static int buv_bind(void *server, struct uri const *);
 static int buv_listen(void *server, int backlog);
 static int buv_send(void *socket, struct sc_msg const *);
@@ -73,17 +73,17 @@ static void buv_init(void *socket, struct sc_watcher *watcher)
 
 static void buv_free(void *socket) { free(socket); }
 
-static void on_connect_wrap(struct uv_connect_s *request, int status)
+static void on_connect_wrap(struct uv_connect_s *request, int errcode)
 {
     struct socket_uv *uv = request->data;
-    if (status)
+    if (errcode)
     {
-        buv_error("connect failed", status);
-        (*uv->watcher->on_connect_failure)(uv->watcher);
+        buv_error("connect failed", errcode);
+        (*uv->watcher->on_connect)(uv->watcher->socket, errcode);
         return;
     }
 
-    (*uv->watcher->on_connect_success)(uv->watcher);
+    (*uv->watcher->on_connect)(uv->watcher->socket, errcode);
 }
 
 static int connect_pipe(struct socket_uv *clt, char const *filepath)
@@ -170,14 +170,20 @@ static void read_wrap(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
     (void)buf;
     struct socket_uv *uv = stream->data;
+    int errcode = nread >= 0 || nread == UV_EOF ? 0 : (int)nread;
+
     if (nread < 0)
     {
         if (nread == UV_EOF)
-            (*uv->watcher->on_recv_eof)(uv->watcher);
+        {
+            assert(errcode == 0);
+            (*uv->watcher->on_recv)(uv->watcher->socket, 0, errcode);
+        }
         else
         {
-            buv_error("read error", (int)nread);
-            (*uv->watcher->on_recv_failure)(uv->watcher);
+            assert(errcode != 0);
+            buv_error("read error", errcode);
+            (*uv->watcher->on_recv)(uv->watcher->socket, 0, errcode);
         }
         sc_msg_free(uv->msg);
         uv->msg = 0;
@@ -196,76 +202,76 @@ static void read_wrap(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 
         if (msg_reader_finished(reader))
         {
-            (*uv->watcher->on_recv_success)(uv->watcher, uv->msg);
+            assert(errcode == 0);
+            (*uv->watcher->on_recv)(uv->watcher->socket, uv->msg, errcode);
             sc_msg_free(uv->msg);
             uv->msg = 0;
         }
     }
 }
 
-static int buv_accept(void *server, void *client)
+static void buv_accept(void *server, void *client)
 {
     struct socket_uv *srv = server;
     struct socket_uv *clt = client;
 
-    int r = 0;
+    assert(srv->proto == PROTO_PIPE || srv->proto == PROTO_TCP);
+
+    int errcode = 0;
     if (srv->proto == PROTO_PIPE)
     {
-        if ((r = uv_pipe_init(buv_data->loop, &clt->stream.pipe, 0)))
-            buv_error("pipe init error", r);
-    }
-    else if (srv->proto == PROTO_TCP)
-    {
-        if ((r = uv_tcp_init(buv_data->loop, &clt->stream.tcp)))
-            buv_error("tcp init error", r);
+        if ((errcode = uv_pipe_init(buv_data->loop, &clt->stream.pipe, 0)))
+            buv_error("pipe init error", errcode);
     }
     else
-        assert(false);
+    {
+        if ((errcode = uv_tcp_init(buv_data->loop, &clt->stream.tcp)))
+            buv_error("tcp init error", errcode);
+    }
 
     clt->proto = srv->proto;
 
-    if (r)
+    if (errcode)
     {
-        (*clt->watcher->on_accept_failure)(clt->watcher);
-        return r;
+        (*clt->watcher->on_accept)(clt->watcher->socket, errcode);
+        return;
     }
 
     struct uv_stream_s *srv_stream = (struct uv_stream_s *)(&srv->stream);
     struct uv_stream_s *clt_stream = (struct uv_stream_s *)(&clt->stream);
 
-    if ((r = uv_accept(srv_stream, clt_stream)))
+    if ((errcode = uv_accept(srv_stream, clt_stream)))
     {
-        buv_error("accept error", r);
-        (*clt->watcher->on_accept_failure)(clt->watcher);
-        return r;
+        buv_error("accept error", errcode);
+        (*clt->watcher->on_accept)(clt->watcher->socket, errcode);
+        return;
     }
 
-    if ((r = uv_read_start(clt_stream, alloc_wrap, read_wrap)))
+    if ((errcode = uv_read_start(clt_stream, alloc_wrap, read_wrap)))
     {
-        buv_error("read start error", r);
-        (*clt->watcher->on_accept_failure)(clt->watcher);
-        return r;
+        buv_error("read start error", errcode);
+        (*clt->watcher->on_accept)(clt->watcher->socket, errcode);
+        return;
     }
 
-    (*clt->watcher->on_accept_success)(clt->watcher);
-
-    return r;
+    assert(errcode == 0);
+    (*clt->watcher->on_accept)(clt->watcher->socket, errcode);
 }
 
 static int bind_pipe(struct socket_uv *srv, char const *filepath)
 {
-    int r = uv_pipe_init(buv_data->loop, &srv->stream.pipe, 0);
-    if (r)
+    int errcode = uv_pipe_init(buv_data->loop, &srv->stream.pipe, 0);
+    if (errcode)
     {
-        buv_error("pipe init error", r);
-        return r;
+        buv_error("pipe init error", errcode);
+        return errcode;
     }
-    if ((r = uv_pipe_bind(&srv->stream.pipe, filepath)))
+    if ((errcode = uv_pipe_bind(&srv->stream.pipe, filepath)))
     {
-        buv_error("pipe bind error", r);
-        return r;
+        buv_error("pipe bind error", errcode);
+        return errcode;
     }
-    return r;
+    return errcode;
 }
 
 static int bind_tcp(struct socket_uv *srv, char const *ip4, unsigned port)
@@ -296,50 +302,46 @@ static int buv_bind(void *server, struct uri const *uri)
 {
     struct socket_uv *srv = server;
     srv->proto = uri_scheme_protocol(uri);
+    assert(srv->proto == PROTO_PIPE || srv->proto == PROTO_TCP);
 
-    if (srv->proto == PROTO_PIPE) return bind_pipe(srv, uri_pipe_filepath(uri));
-    if (srv->proto == PROTO_TCP)
-        return bind_tcp(srv, uri_tcp_ip4(uri), uri_tcp_port(uri));
+    int errcode = 0;
+    if (srv->proto == PROTO_PIPE)
+    {
+        errcode = bind_pipe(srv, uri_pipe_filepath(uri));
+    }
+    else
+    {
+        errcode = bind_tcp(srv, uri_tcp_ip4(uri), uri_tcp_port(uri));
+    }
 
-    assert(false);
+    return errcode;
 }
 
-static void on_connection_wrap(struct uv_stream_s *stream, int status)
+static void on_connection_wrap(struct uv_stream_s *stream, int errcode)
 {
     struct socket_uv *uv = stream->data;
-    if (status)
-    {
-        buv_error("connection error", status);
-        (*uv->watcher->on_connection_failure)(uv->watcher);
-        return;
-    }
-    (*uv->watcher->on_connection_success)(uv->watcher);
+    if (errcode) buv_error("connection error", errcode);
+
+    (*uv->watcher->on_connection)(uv->watcher->socket, errcode);
 }
 
 static int buv_listen(void *server, int backlog)
 {
     struct socket_uv *srv = server;
+    struct uv_stream_s *stream = (struct uv_stream_s *)(&srv->stream);
 
-    int r = uv_listen((struct uv_stream_s *)(&srv->stream), backlog,
-                      &on_connection_wrap);
-    if (r)
-    {
-        buv_error("listen error", r);
-        return r;
-    }
-    return r;
+    int errcode = uv_listen(stream, backlog, &on_connection_wrap);
+
+    if (errcode) buv_error("listen error", errcode);
+    return errcode;
 }
 
-static void write_wrap(struct uv_write_s *request, int status)
+static void write_wrap(struct uv_write_s *request, int errcode)
 {
     struct socket_uv *uv = request->data;
-    if (status)
-    {
-        buv_error("write error", status);
-        (*uv->watcher->on_send_failure)(uv->watcher);
-        return;
-    }
-    (*uv->watcher->on_send_success)(uv->watcher);
+    if (errcode) buv_error("write error", errcode);
+
+    (*uv->watcher->on_send)(uv->watcher->socket, errcode);
 }
 
 static int buv_send(void *socket, struct sc_msg const *msg)
@@ -353,19 +355,17 @@ static int buv_send(void *socket, struct sc_msg const *msg)
 
     struct uv_stream_s *stream = (struct uv_stream_s *)&uv->stream;
     struct uv_write_s *request = &uv->write_request;
-    int r = uv_write(request, stream, uv->write_buffers, 2, &write_wrap);
-    if (r)
-    {
-        buv_error("send error", r);
-        return r;
-    }
-    return r;
+
+    int errcode = uv_write(request, stream, uv->write_buffers, 2, &write_wrap);
+
+    if (errcode) buv_error("send error", errcode);
+    return errcode;
 }
 
 static void close_wrap(struct uv_handle_s *handle)
 {
     struct socket_uv *uv = handle->data;
-    (*uv->watcher->on_close)(uv->watcher);
+    (*uv->watcher->on_close)(uv->watcher->socket);
 }
 
 static int buv_close(void *socket)

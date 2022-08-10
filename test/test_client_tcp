@@ -13,8 +13,6 @@ RECV_MSGS_FILE=$TMPDIR/received.msgs
 ACTUAL_FILE=$TMPDIR/actual.txt
 DESIRED_FILE=$TMPDIR/desired.txt
 
-echo "$TMPDIR"
-
 cat >"$MESSAGES_FILE" <<-EOM
 First message
 Second message
