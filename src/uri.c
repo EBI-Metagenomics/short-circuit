@@ -10,11 +10,7 @@
 struct uri
 {
     char *str;
-    struct
-    {
-        char const *lib;
-        char const *proto;
-    } scheme;
+    char const *proto;
     union
     {
         struct
@@ -31,6 +27,7 @@ struct uri
 
 static bool check_ip4(char const *src);
 static bool check_port(char const *port);
+static bool is_protocol_known(char const *proto);
 
 struct uri *sc_uri_new(char const *instr, int *errcode)
 {
@@ -52,18 +49,10 @@ struct uri *sc_uri_new(char const *instr, int *errcode)
 
     size_t urimax = strlen(uri->str) + 1;
     char *path = 0;
-    char *scheme = ctb_strtok_s(uri->str, &urimax, ":", &path);
+    uri->proto = ctb_strtok_s(uri->str, &urimax, ":", &path);
     if (!path) goto cleanup;
 
-    size_t schememax = strlen(scheme) + 1;
-    char *scheme_ntok = 0;
-    uri->scheme.lib = ctb_strtok_s(scheme, &schememax, "+", &scheme_ntok);
-    if (!uri->scheme.lib || strcmp(uri->scheme.lib, "sc")) goto cleanup;
-    if (!scheme_ntok) goto cleanup;
-
-    uri->scheme.proto = ctb_strtok_s(0, &schememax, "+", &scheme_ntok);
-    if (!uri->scheme.proto) goto cleanup;
-    if ((strcmp(uri->scheme.proto, "pipe") && strcmp(uri->scheme.proto, "tcp")))
+    if (!is_protocol_known(uri->proto))
     {
         *errcode = SC_EINVPROTO;
         goto cleanup;
@@ -73,7 +62,7 @@ struct uri *sc_uri_new(char const *instr, int *errcode)
     if (*(path++) != '/') goto cleanup;
     if (*(path++) != '/') goto cleanup;
 
-    if (!strcmp(uri->scheme.proto, "pipe"))
+    if (!strcmp(uri->proto, "pipe"))
     {
         uri->pipe.filepath = path;
     }
@@ -100,11 +89,12 @@ void sc_uri_del(struct uri const *uri)
     free((void *)uri);
 }
 
-enum proto sc_uri_scheme_protocol(struct uri const *uri)
+enum proto sc_uri_protocol(struct uri const *uri)
 {
-    if (!strcmp(uri->scheme.proto, "pipe")) return PROTO_PIPE;
-    if (!strcmp(uri->scheme.proto, "tcp")) return PROTO_TCP;
-    assert(0);
+    assert(is_protocol_known(uri->proto));
+    if (!strcmp(uri->proto, "pipe")) return PROTO_PIPE;
+    if (!strcmp(uri->proto, "tcp")) return PROTO_TCP;
+    return PROTO_NOSET;
 }
 
 char const *sc_uri_pipe_filepath(struct uri const *uri)
@@ -170,4 +160,9 @@ static bool check_port(char const *port)
     if (port == end) return false;
     if (num < 1 || num > 65535) return false;
     return true;
+}
+
+static bool is_protocol_known(char const *proto)
+{
+    return !strcmp(proto, "pipe") || !strcmp(proto, "tcp");
 }

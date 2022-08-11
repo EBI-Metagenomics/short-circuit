@@ -11,7 +11,7 @@ PORT=60721
 ACTUAL_FILE=$TMPDIR/actual.txt
 DESIRED_FILE=$TMPDIR/desired.txt
 
-"$SCRIPT_DIR/server" "sc+tcp://$IP4:$PORT" "$ACTUAL_FILE" &
+"$SCRIPT_DIR/server" "tcp://$IP4:$PORT" "$ACTUAL_FILE" &
 SERVER_PID=$!
 waitport listen "$PORT"
 

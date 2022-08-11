@@ -43,7 +43,7 @@ int main(void)
     server = sc_socket_new();
     sc_socket_on_connection(server, &on_connection);
 
-    sc_socket_bind(server, "sc+tcp://127.0.0.1:8777");
+    sc_socket_bind(server, "tcp://127.0.0.1:8777");
     sc_socket_listen(server, 1);
 
     client = sc_socket_new();

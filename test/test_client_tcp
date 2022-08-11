@@ -32,7 +32,7 @@ recvrec --ip4 "$IP4" --port "$PORT" >"$RECV_MSGS_FILE" &
 RECVREC_PID=$!
 waitport listen "$PORT"
 
-"$SCRIPT_DIR/client" "sc+tcp://$IP4:$PORT" "$MESSAGES_FILE"
+"$SCRIPT_DIR/client" "tcp://$IP4:$PORT" "$MESSAGES_FILE"
 CLIENT_PID=$!
 waitproc $CLIENT_PID 2
 

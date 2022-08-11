@@ -113,7 +113,7 @@ static int connect_tcp(struct socket_uv *clt, char const *ip4, unsigned port)
 static int buv_connect(void *client, struct uri const *uri)
 {
     struct socket_uv *clt = client;
-    enum proto proto = sc_uri_scheme_protocol(uri);
+    enum proto proto = sc_uri_protocol(uri);
     if (proto == PROTO_PIPE)
         return connect_pipe(clt, sc_uri_pipe_filepath(uri));
     if (proto == PROTO_TCP)
@@ -262,7 +262,7 @@ static int bind_tcp(struct socket_uv *srv, char const *ip4, unsigned port)
 static int buv_bind(void *server, struct uri const *uri)
 {
     struct socket_uv *srv = server;
-    srv->proto = sc_uri_scheme_protocol(uri);
+    srv->proto = sc_uri_protocol(uri);
     assert(srv->proto == PROTO_PIPE || srv->proto == PROTO_TCP);
 
     int errcode = 0;

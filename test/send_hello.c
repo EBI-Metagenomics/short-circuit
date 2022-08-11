@@ -16,7 +16,7 @@ int main(void)
 
     struct sc_socket *socket = sc_socket_new();
     sc_socket_on_connect(socket, &on_connect);
-    sc_socket_connect(socket, "sc+tcp://127.0.0.1:8765");
+    sc_socket_connect(socket, "tcp://127.0.0.1:8765");
 
     uv_run(uv.loop, UV_RUN_DEFAULT);
 
