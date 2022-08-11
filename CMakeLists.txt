@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16.3 FATAL_ERROR)
 
 project(
   sc
-  VERSION 0.0.3
+  VERSION 0.0.4
   LANGUAGES C)
 
 # Generate compile_commands.json file
@@ -70,6 +70,12 @@ install(
   FILE sc-targets.cmake
   NAMESPACE SC::
   DESTINATION lib/cmake/sc)
+
+include(CMakePackageConfigHelpers)
+
+set(CMAKE_CONFIG_FILE ${CMAKE_CURRENT_BINARY_DIR}/sc-config.cmake)
+configure_package_config_file(sc-config.cmake.in ${CMAKE_CONFIG_FILE}
+                              INSTALL_DESTINATION lib/cmake/sc)
 
 install(FILES ${EXPORT_FILE} DESTINATION include/sc)
 
