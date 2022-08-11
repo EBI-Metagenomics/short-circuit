@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16.3 FATAL_ERROR)
 
 project(
   sc
-  VERSION 0.0.2
+  VERSION 0.0.3
   LANGUAGES C)
 
 # Generate compile_commands.json file

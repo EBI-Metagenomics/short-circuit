@@ -2,6 +2,7 @@
 #define SC_MSG_H
 
 #include "ctb/ctb.h"
+#include "sc/export.h"
 
 #define SC_MSG_SIZE_BYTES 4
 
@@ -17,10 +18,10 @@ struct sc_msg
 typedef struct sc_msg *(sc_msg_alloc_fn_t)(unsigned size);
 typedef void sc_msg_free_fn_t(struct sc_msg *);
 
-struct sc_msg *sc_msg_alloc(unsigned size);
-void sc_msg_free(struct sc_msg *);
+SC_API struct sc_msg *sc_msg_alloc(unsigned size);
+SC_API void sc_msg_free(struct sc_msg *);
 
-void sc_msg_set_size(struct sc_msg *, unsigned size);
-unsigned sc_msg_get_size(struct sc_msg const *);
+SC_API void sc_msg_set_size(struct sc_msg *, unsigned size);
+SC_API unsigned sc_msg_get_size(struct sc_msg const *);
 
 #endif
