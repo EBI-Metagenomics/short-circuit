@@ -31,6 +31,19 @@ add_library(SC::sc ALIAS sc)
 target_link_libraries(sc PUBLIC uv_a)
 target_link_libraries(sc PUBLIC C_TOOLBELT::ctb)
 
+set(EXPORT_FILE ${CMAKE_CURRENT_BINARY_DIR}/sc/export.h)
+include(GenerateExportHeader)
+generate_export_header(
+  sc
+  BASE_NAME
+  SC
+  INCLUDE_GUARD_NAME
+  SC_EXPORT_H
+  EXPORT_MACRO_NAME
+  SC_API
+  EXPORT_FILE_NAME
+  ${EXPORT_FILE})
+
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   include(CheckIPOSupported)
   check_ipo_supported()
@@ -47,6 +60,18 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
+
+install(TARGETS sc EXPORT sc-targets)
+
+install(DIRECTORY include/sc/ DESTINATION include/sc)
+
+install(
+  EXPORT sc-targets
+  FILE sc-targets.cmake
+  NAMESPACE SC::
+  DESTINATION lib/cmake/sc)
+
+install(FILES ${EXPORT_FILE} DESTINATION include/sc)
 
 enable_testing()
 add_subdirectory(test)
