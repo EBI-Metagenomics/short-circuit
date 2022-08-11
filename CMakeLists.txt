@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 3.16.3 FATAL_ERROR)
 project(
   sc
   VERSION 0.0.1
-  LANGUAGES C
-)
+  LANGUAGES C)
 
 # Generate compile_commands.json file
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -26,8 +25,7 @@ add_library(
   src/socket.c
   src/uri.c
   src/warn.c
-  src/watcher.c
-)
+  src/watcher.c)
 add_library(SC::sc ALIAS sc)
 
 target_link_libraries(sc PUBLIC uv_a)
@@ -46,17 +44,17 @@ set_target_properties(sc PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(
   sc
   PUBLIC $<INSTALL_INTERFACE:include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-  PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-)
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+  PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 
 enable_testing()
 add_subdirectory(test)
 
 set(CPACK_PACKAGE_NAME sc)
 set(CPACK_PACKAGE_VENDOR "Danilo Horta")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Short-circuit is a socket library for loop-based applications")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Short-circuit is a socket library for loop-based applications")
 set(CPACK_PACKAGE_CONTACT "Danilo Horta")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})

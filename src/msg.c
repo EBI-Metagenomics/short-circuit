@@ -16,10 +16,7 @@ static void default_heap_free(struct sc_msg *msg) { free(msg); }
 sc_msg_alloc_fn_t *msg_alloc = &default_heap_alloc;
 sc_msg_free_fn_t *msg_free = &default_heap_free;
 
-struct sc_msg *sc_msg_alloc(unsigned size)
-{
-    return (*msg_alloc)(size);
-}
+struct sc_msg *sc_msg_alloc(unsigned size) { return (*msg_alloc)(size); }
 
 void sc_msg_free(struct sc_msg *msg) { (*msg_free)(msg); }
 
