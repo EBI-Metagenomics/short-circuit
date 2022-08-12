@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16.3 FATAL_ERROR)
 
 project(
   sc
-  VERSION 0.0.5
+  VERSION 0.0.6
   LANGUAGES C)
 
 # Generate compile_commands.json file
@@ -74,11 +74,16 @@ install(
 include(CMakePackageConfigHelpers)
 
 set(CMAKE_CONFIG_FILE ${CMAKE_CURRENT_BINARY_DIR}/sc-config.cmake)
-configure_package_config_file(sc-config.cmake.in ${CMAKE_CONFIG_FILE}
-                              INSTALL_DESTINATION lib/cmake/sc)
+configure_package_config_file(
+  sc-config.cmake.in ${CMAKE_CONFIG_FILE}
+  INSTALL_DESTINATION lib/cmake/sc
+  NO_SET_AND_CHECK_MACRO)
 
 install(FILES ${CMAKE_CONFIG_FILE} DESTINATION lib/cmake/sc)
 install(FILES ${EXPORT_FILE} DESTINATION include/sc)
+
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/README.md
+              ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION share/docs/sc)
 
 enable_testing()
 add_subdirectory(test)
