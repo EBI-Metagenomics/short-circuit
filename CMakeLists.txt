@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16.3 FATAL_ERROR)
 
 project(
   sc
-  VERSION 0.0.6
+  VERSION 0.0.7
   LANGUAGES C)
 
 set(SC_MAIN_PROJECT OFF)
