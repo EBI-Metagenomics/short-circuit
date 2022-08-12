@@ -7,11 +7,11 @@
 #include "sc/backend_uv.h"
 #include "sc/errcode.h"
 #include "uri.h"
+#include "uv.h"
 #include "warn.h"
 #include "watcher.h"
 #include <assert.h>
 #include <stdlib.h>
-#include <uv.h>
 
 union stream
 {

@@ -1,3 +1,14 @@
+cpmaddpackage(
+  NAME
+  libuv
+  VERSION
+  1.44.2
+  GITHUB_REPOSITORY
+  libuv/libuv
+  OPTIONS
+  "LIBUV_BUILD_TESTS OFF"
+  "LIBUV_BUILD_BENCH OFF")
+
 add_executable(server server.c)
 target_link_libraries(server PRIVATE SC::sc)
 target_link_libraries(server PRIVATE uv_a)

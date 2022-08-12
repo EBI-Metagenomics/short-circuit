@@ -1,12 +1,12 @@
 #include "fatal.h"
 #include "sc/sc.h"
+#include "uv.h"
 #include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <uv.h>
 
 struct server;
 

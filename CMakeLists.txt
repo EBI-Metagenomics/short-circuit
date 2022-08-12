@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16.3 FATAL_ERROR)
 
 project(
   sc
-  VERSION 0.0.7
+  VERSION 0.0.8
   LANGUAGES C)
 
 set(SC_MAIN_PROJECT OFF)
@@ -21,7 +21,6 @@ option(SC_BUILD_TESTS "Build the unit tests" ${SC_BUILD_TESTS_DEFAULT})
 message(STATUS "SC_MAIN_PROJECT: " ${SC_MAIN_PROJECT})
 message(STATUS "SC_BUILD_TESTS: " ${SC_BUILD_TESTS})
 
-# Generate compile_commands.json file
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(cmake/compiler-options.cmake)
@@ -29,29 +28,6 @@ include(cmake/sanitizers.cmake)
 include(cmake/CPM.cmake)
 
 cpmaddpackage("gh:horta/c-toolbelt@0.9.2")
-
-if(SC_BUILD_TESTS)
-  set(SC_LIBUV_INTERFACE_ONLY NO)
-else()
-  set(SC_LIBUV_INTERFACE_ONLY YES)
-endif()
-
-cpmaddpackage(
-  NAME
-  libuv
-  VERSION
-  1.44.2
-  GITHUB_REPOSITORY
-  libuv/libuv
-  DOWNLOAD_ONLY
-  ${SC_LIBUV_INTERFACE_ONLY})
-
-if(libuv_ADDED)
-  add_library(uv_interface INTERFACE)
-  target_include_directories(
-    uv_interface INTERFACE $<BUILD_INTERFACE:${libuv_SOURCE_DIR}/include>)
-  add_library(SC::uv_interface ALIAS uv_interface)
-endif()
 
 add_library(
   sc
@@ -88,8 +64,9 @@ target_include_directories(
   PUBLIC $<INSTALL_INTERFACE:include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-  PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-          $<BUILD_INTERFACE:${libuv_SOURCE_DIR}/include>)
+  PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libs/libuv-1.44.2/include>)
 
 install(TARGETS sc EXPORT sc-targets)
 

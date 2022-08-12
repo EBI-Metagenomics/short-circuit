@@ -1,5 +1,5 @@
 #include "sc/sc.h"
-#include <uv.h>
+#include "uv.h"
 
 static struct sc_msg hello = SC_MSG_INIT(5, "Hello");
 

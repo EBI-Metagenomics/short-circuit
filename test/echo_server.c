@@ -1,6 +1,6 @@
 #include "fatal.h"
 #include "sc/sc.h"
-#include <uv.h>
+#include "uv.h"
 
 static struct sc_socket *server = 0;
 static struct sc_socket *client = 0;

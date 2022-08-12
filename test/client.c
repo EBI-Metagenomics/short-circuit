@@ -1,5 +1,6 @@
 #include "fatal.h"
 #include "sc/sc.h"
+#include "uv.h"
 #include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -7,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <uv.h>
 
 enum
 {
