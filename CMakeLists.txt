@@ -5,6 +5,22 @@ project(
   VERSION 0.0.6
   LANGUAGES C)
 
+set(SC_MAIN_PROJECT OFF)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  set(SC_MAIN_PROJECT ON)
+endif()
+
+if(SC_MAIN_PROJECT)
+  set(SC_BUILD_TESTS_DEFAULT ON)
+else()
+  set(SC_BUILD_TESTS_DEFAULT OFF)
+endif()
+
+option(SC_BUILD_TESTS "Build the unit tests" ${SC_BUILD_TESTS_DEFAULT})
+
+message(STATUS "SC_MAIN_PROJECT: " ${SC_MAIN_PROJECT})
+message(STATUS "SC_BUILD_TESTS: " ${SC_BUILD_TESTS})
+
 # Generate compile_commands.json file
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -12,8 +28,30 @@ include(cmake/compiler-options.cmake)
 include(cmake/sanitizers.cmake)
 include(cmake/CPM.cmake)
 
-cpmaddpackage(NAME c_toolbelt VERSION 0.9.0 GITHUB_REPOSITORY horta/c-toolbelt)
-cpmaddpackage(NAME libuv VERSION 1.44.2 GITHUB_REPOSITORY libuv/libuv)
+cpmaddpackage("gh:horta/c-toolbelt@0.9.2")
+
+if(SC_BUILD_TESTS)
+  set(SC_LIBUV_INTERFACE_ONLY NO)
+else()
+  set(SC_LIBUV_INTERFACE_ONLY YES)
+endif()
+
+cpmaddpackage(
+  NAME
+  libuv
+  VERSION
+  1.44.2
+  GITHUB_REPOSITORY
+  libuv/libuv
+  DOWNLOAD_ONLY
+  ${SC_LIBUV_INTERFACE_ONLY})
+
+if(libuv_ADDED)
+  add_library(uv_interface INTERFACE)
+  target_include_directories(
+    uv_interface INTERFACE $<BUILD_INTERFACE:${libuv_SOURCE_DIR}/include>)
+  add_library(SC::uv_interface ALIAS uv_interface)
+endif()
 
 add_library(
   sc
@@ -28,21 +66,12 @@ add_library(
   src/watcher.c)
 add_library(SC::sc ALIAS sc)
 
-target_link_libraries(sc PUBLIC uv_a)
 target_link_libraries(sc PUBLIC C_TOOLBELT::ctb)
 
 set(EXPORT_FILE ${CMAKE_CURRENT_BINARY_DIR}/sc/export.h)
 include(GenerateExportHeader)
-generate_export_header(
-  sc
-  BASE_NAME
-  SC
-  INCLUDE_GUARD_NAME
-  SC_EXPORT_H
-  EXPORT_MACRO_NAME
-  SC_API
-  EXPORT_FILE_NAME
-  ${EXPORT_FILE})
+generate_export_header(sc EXPORT_MACRO_NAME SC_API EXPORT_FILE_NAME
+                       ${EXPORT_FILE})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   include(CheckIPOSupported)
@@ -59,7 +88,8 @@ target_include_directories(
   PUBLIC $<INSTALL_INTERFACE:include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-  PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
+  PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+          $<BUILD_INTERFACE:${libuv_SOURCE_DIR}/include>)
 
 install(TARGETS sc EXPORT sc-targets)
 
@@ -85,8 +115,10 @@ install(FILES ${EXPORT_FILE} DESTINATION include/sc)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/README.md
               ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION share/docs/sc)
 
-enable_testing()
-add_subdirectory(test)
+if(SC_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(test)
+endif()
 
 set(CPACK_PACKAGE_NAME sc)
 set(CPACK_PACKAGE_VENDOR "Danilo Horta")
